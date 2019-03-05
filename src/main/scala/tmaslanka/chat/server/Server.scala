@@ -11,7 +11,8 @@ import tmaslanka.chat.Settings
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-class Server(settings: Settings)
+class Server(settings: Settings,
+             routes: Routes)
             (implicit system: ActorSystem,
              mat: Materializer,
              ex: ExecutionContext) extends StrictLogging {
@@ -22,13 +23,18 @@ class Server(settings: Settings)
   val route: Route = logRequestResult(("request", Logging.InfoLevel)) {
     (path("health-check") & get) {
         complete("I am here")
+    } ~
+    pathPrefix("v1") {
+      routes.users
     }
   }
   // @formatter:on
 
-  def start(): Unit = {
+  def start(): Future[Http.ServerBinding] = {
     logger.info(s"Starting server ${settings.host}:${settings.port}")
-    maybeBinding = Some(Http().bindAndHandle(route, settings.host, settings.port))
+    val eventualBinding = Http().bindAndHandle(route, settings.host, settings.port)
+    maybeBinding = Some(eventualBinding)
+    eventualBinding
   }
 
   def stop(): Unit = {

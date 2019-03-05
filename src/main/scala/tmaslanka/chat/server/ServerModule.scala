@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import tmaslanka.chat.Settings
+import tmaslanka.chat.services.{ChatService, UserService}
 
 import scala.concurrent.ExecutionContext
 
@@ -14,5 +15,9 @@ class ServerModule {
 
   val settings = Settings(ConfigFactory.load())
 
-  val server = new Server(settings)
+  val userService = new UserService
+  val chatService = new ChatService
+
+  val routes = new Routes(userService, chatService)
+  val server = new Server(settings, routes)
 }
