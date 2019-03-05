@@ -50,10 +50,10 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           %% "akka-stream" % akkaV,
 
   "ch.qos.logback"              %  "logback-classic" % logbackV,
-  "org.slf4j"                   % "slf4j-api" % slf4jV,
+  "org.slf4j"                   %  "slf4j-api" % slf4jV,
   "com.typesafe.scala-logging"  %% "scala-logging" % scalaLoggingV,
 
-  "com.typesafe"                % "config" % typesafeConfigV,
+  "com.typesafe"                %  "config" % typesafeConfigV,
 
   "org.scalatest"               %% "scalatest" % scalatestV % "test,it-test",
   "io.rest-assured"             % "rest-assured" % restAssuredV % "it-test",
