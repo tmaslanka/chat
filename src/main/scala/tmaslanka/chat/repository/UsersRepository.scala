@@ -1,7 +1,10 @@
 package tmaslanka.chat.repository
 
-import tmaslanka.chat.model.domain.{User, UserId}
+import java.util.concurrent.ConcurrentHashMap
 
+import tmaslanka.chat.model.domain.{User, UserId, UserName}
+
+import scala.collection._
 import scala.concurrent.Future
 
 trait UsersRepository {
@@ -13,11 +16,21 @@ trait UsersRepository {
 
 class InMemoryUserRepository extends UsersRepository {
   import scala.collection.JavaConverters._
-  val users: scala.collection.concurrent.Map[UserId, User] =
-    new java.util.concurrent.ConcurrentHashMap[UserId, User]().asScala
+  val users: concurrent.Map[UserId, User] = new ConcurrentHashMap[UserId, User]().asScala
+
+  val userNamesToUserId: concurrent.Map[UserName, UserId] = new ConcurrentHashMap[UserName, UserId]().asScala
 
   override def createIfNotExists(user: User): Future[Boolean] = Future.successful {
-    users.putIfAbsent(user.userId, user).isEmpty
+    users.get(user.userId) match {
+      case Some(_) =>
+        false
+      case None =>
+        val userId = userNamesToUserId.putIfAbsent(user.userName, user.userId) match {
+          case Some(oldUserId) => oldUserId
+          case None => user.userId
+        }
+        users.putIfAbsent(userId, user).isEmpty
+    }
   }
 
   override def getUser(userId: UserId): Future[Option[User]] = Future.successful {
