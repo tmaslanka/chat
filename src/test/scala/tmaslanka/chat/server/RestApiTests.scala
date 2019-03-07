@@ -17,19 +17,30 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     server.stop()
   }
 
-  "POST v1/users" should "create user" in {
+  "PUT v1/users" should "create user" in {
     given()
       .contentType(`application/json`)
       .body(""" {"userName": "John"} """)
       .when()
-      .post("v1/users")
+      .put("v1/users")
     .Then()
       .statusCode(200)
       .body("userId", isNotEmptyString)
   }
 
+  "PUT v1/users" should "not create new user for the same user name" in {
+    val userName = "DoubleCreated"
+    putUser(userName)
+      .Then()
+      .statusCode(200)
+
+    putUser(userName)
+      .Then()
+      .statusCode(400)
+  }
+
   "GET v1/users/userId/chats" should "return list of chat ids for user" in {
-    val userId = createUser()
+    val userId = createUser("Mat")
 
     given()
       .get(s"v1/users/$userId/chats")
@@ -37,14 +48,18 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body("chats", Matchers.hasSize(0))
   }
 
-  def createUser(): UserId = UserId(
-    given()
-      .contentType(`application/json`)
-      .body(""" {"userName": "John"} """)
-      .when()
-      .post("v1/users")
+  private def createUser(userName: String): UserId = UserId(
+    putUser(userName)
       .body()
       .path("userId"))
+
+  private def putUser(userName: String) = {
+    given()
+      .contentType(`application/json`)
+      .body(s""" {"userName": "$userName"} """)
+      .when()
+      .put("v1/users")
+  }
 
   private def isNotEmptyString = {
     Matchers.not(Matchers.isEmptyString)

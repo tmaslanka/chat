@@ -1,6 +1,7 @@
 package tmaslanka.chat.server
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
@@ -13,16 +14,18 @@ import scala.concurrent.ExecutionContext
 
 class Routes(userService: UserService,
              chatService: ChatService)
-            (implicit system: ActorSystem,
+            (implicit
              mat: Materializer,
              ex: ExecutionContext) extends JsonSupport {
 
   // @formatter:off
   def users: Route = pathPrefix("users") {
     pathEndOrSingleSlash {
-      post {
+      put {
         entity(as[CreateUserCommand]) { request =>
-          complete(userService.createUser(request))
+          complete(
+            userService.createUser(request)
+              .map(createResourceToResponse))
         }
       }
     } ~
@@ -56,4 +59,9 @@ class Routes(userService: UserService,
     }
   }
   // @formatter:on
+
+  private def createResourceToResponse[A](maybeData: Option[A]): (StatusCode, Option[A]) = maybeData match {
+    case Some(data) => StatusCodes.OK -> Some(data)
+    case None => StatusCodes.BadRequest -> None
+  }
 }

@@ -1,6 +1,6 @@
 package tmaslanka.chat.model.commands
 
-import tmaslanka.chat.model.domain.{ChatDescription, ChatId}
+import tmaslanka.chat.model.domain.ChatDescription
 
 final case class CreateMessageCommand(message: String)
 

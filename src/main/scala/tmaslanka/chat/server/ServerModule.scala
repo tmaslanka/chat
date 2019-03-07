@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import tmaslanka.chat.Settings
+import tmaslanka.chat.repository.InMemoryUserRepository
 import tmaslanka.chat.services.{ChatService, UserService}
 
 import scala.concurrent.ExecutionContext
@@ -15,7 +16,7 @@ class ServerModule {
 
   val settings = Settings(ConfigFactory.load())
 
-  val userService = new UserService
+  val userService = new UserService(new InMemoryUserRepository())
   val chatService = new ChatService
 
   val routes = new Routes(userService, chatService)

@@ -1,7 +1,7 @@
 package tmaslanka.chat.services
 
 import tmaslanka.chat.model.commands.{ChatsListResponse, CreateMessageCommand}
-import tmaslanka.chat.model.domain.{ChatDescription, ChatId, UserId}
+import tmaslanka.chat.model.domain.{ChatId, UserId}
 
 import scala.concurrent.Future
 
