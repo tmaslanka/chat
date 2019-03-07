@@ -32,7 +32,8 @@ class Routes(userService: UserService,
     pathPrefix(Segment) { userIdParam =>
       val userId = UserId(userIdParam)
       (pathEnd & get) {
-        complete(userService.getUser(userId))
+        complete(userService.getUser(userId)
+          .map(resourceGetToResponse))
       } ~
       path("chats") {
         complete(chatService.getUserChats(userId))
@@ -63,5 +64,10 @@ class Routes(userService: UserService,
   private def createResourceToResponse[A](maybeData: Option[A]): (StatusCode, Option[A]) = maybeData match {
     case Some(data) => StatusCodes.OK -> Some(data)
     case None => StatusCodes.BadRequest -> None
+  }
+
+  private def resourceGetToResponse[A](maybeData: Option[A]): (StatusCode, Option[A]) = maybeData match {
+    case Some(data) => StatusCodes.OK -> Some(data)
+    case None => StatusCodes.NotFound -> None
   }
 }

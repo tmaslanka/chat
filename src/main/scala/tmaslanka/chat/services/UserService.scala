@@ -8,9 +8,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class UserService(repository: UsersRepository)(implicit ex: ExecutionContext) {
 
-  val result = Future.successful("")
-
-  def getUser(userId: UserId) = result
+  def getUser(userId: UserId): Future[Option[User]] = {
+    repository.getUser(userId)
+  }
 
   def createUser(request: CreateUserCommand): Future[Option[UserCreatedResponse]] = {
     val userId = UserId(request.userName.value)

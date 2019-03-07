@@ -1,5 +1,7 @@
 package tmaslanka.chat.server
 
+import java.util.UUID
+
 import io.restassured.RestAssured._
 import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import org.hamcrest.Matchers
@@ -17,19 +19,15 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     server.stop()
   }
 
-  "PUT v1/users" should "create user" in {
-    given()
-      .contentType(`application/json`)
-      .body(""" {"userName": "John"} """)
-      .when()
-      .put("v1/users")
+  "PUT /v1/users" should "create user" in {
+    putUser(unique("John"))
     .Then()
       .statusCode(200)
       .body("userId", isNotEmptyString)
   }
 
-  "PUT v1/users" should "not create new user for the same user name" in {
-    val userName = "DoubleCreated"
+  "PUT /v1/users" should "not create new user for the same user name" in {
+    val userName = unique("DoubleCreated")
     putUser(userName)
       .Then()
       .statusCode(200)
@@ -39,8 +37,29 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .statusCode(400)
   }
 
-  "GET v1/users/userId/chats" should "return list of chat ids for user" in {
-    val userId = createUser("Mat")
+  "GET /v1/users/userId" should "return user" in {
+    val userName = unique("Andrzej")
+    val userId = createUser(userName)
+
+    given()
+      .get(s"v1/users/$userId")
+      .Then()
+      .statusCode(200)
+      .body("userName", Matchers.is(userName))
+      .body("userId", Matchers.is(userId.value))
+
+  }
+
+  "GET /v1/users/userId" should "not return user" in {
+    val userId = unique("Robert")
+    given()
+      .get(s"v1/users/$userId")
+      .Then()
+      .statusCode(404)
+  }
+
+  "GET /v1/users/userId/chats" should "return list of chat ids for user" in {
+    val userId = createUser(unique("Mat"))
 
     given()
       .get(s"v1/users/$userId/chats")
@@ -64,4 +83,6 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
   private def isNotEmptyString = {
     Matchers.not(Matchers.isEmptyString)
   }
+
+  private def unique(s: String): String = s"$s-${UUID.randomUUID()}"
 }
