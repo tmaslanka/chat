@@ -58,7 +58,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .statusCode(404)
   }
 
-  "GET /v1/users/userId/chats" should "return list of chat ids for user" in {
+  "GET /v1/users/userId/chats" should "return empty list of chat ids for user" in {
     val userId = createUser(unique("Mat"))
 
     given()
@@ -67,10 +67,10 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body("chats", Matchers.hasSize(0))
   }
 
-  private def createUser(userName: String): UserId = UserId(
-    putUser(userName)
-      .body()
-      .path("userId"))
+  private def createUser(userName: String): UserId = {
+    val userId = putUser(userName).body().path[String]("userId")
+    UserId(userId)
+  }
 
   private def putUser(userName: String) = {
     given()

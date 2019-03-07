@@ -7,7 +7,7 @@ organization := "tmaslanka"
 version := "1.0-SNAPSHOT"
 
 scalaVersion := "2.12.7"
-scalacOptions := Seq("-feature", "-unchecked", "-deprecation", "-encoding", "utf8", "-Xlint", "-Ywarn-dead-code", "-Ywarn-unused-import")
+scalacOptions := Seq("-feature", "-unchecked", "-deprecation", "-encoding", "utf8", "-Xlint", "-Ywarn-dead-code", "-Ywarn-unused-import", "-Xfatal-warnings")
 scalacOptions in Test := Seq("-Yrangepos")
 fork in Test := true
 
@@ -33,12 +33,13 @@ parallelExecution in ItTest := false
 fork in ItTest := false
 
 
-val akkaV = "2.5.19"
+val akkaV = "2.5.21"
 val akkaHttpV = "10.1.7"
 val logbackV = "1.2.3"
 val slf4jV = "1.7.25"
 val scalaLoggingV = "3.9.0"
 val typesafeConfigV = "1.3.2"
+val catsV = "1.6.0"
 val scalatestV = "3.0.5"
 val restAssuredV = "3.3.0"
 
@@ -48,6 +49,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           %% "akka-http-spray-json" % akkaHttpV,
   "com.typesafe.akka"           %% "akka-actor" % akkaV,
   "com.typesafe.akka"           %% "akka-stream" % akkaV,
+  "com.typesafe.akka"           %% "akka-cluster-sharding" % akkaV,
+
+  "org.typelevel"               %% "cats-core" % catsV,
 
   "ch.qos.logback"              %  "logback-classic" % logbackV,
   "org.slf4j"                   %  "slf4j-api" % slf4jV,
