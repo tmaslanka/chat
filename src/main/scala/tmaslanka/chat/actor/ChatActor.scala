@@ -14,8 +14,6 @@ object ChatActor {
   sealed trait ChatEvent
   case class MessageAddedEvent(message: ChatMessage) extends ChatEvent
   case class ChatCreatedEvent(userIds: Set[UserId]) extends ChatEvent
-
-  val chatMessageTag = "chatMessage"
 }
 
 class ChatActor(journalQueries: ChatQueries, usersRepository: UsersRepository)
@@ -48,6 +46,7 @@ class ChatActor(journalQueries: ChatQueries, usersRepository: UsersRepository)
   def handleChatCommand(cmd: ChatCommand): Unit = {
     ChatLogic.commandToAction(state, cmd).foreach {
       case Save(event) => persist(event) { event =>
+        //todo save snapshot every N events
         updateState(event)
           .foreach(handleChatEventAction)
       }
