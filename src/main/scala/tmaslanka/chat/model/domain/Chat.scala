@@ -35,9 +35,10 @@ final case class ChatState(lastSeq: Long = -1,
 }
 
 sealed trait ChatAction
-sealed trait ChatActionEventAction extends ChatAction
+sealed trait ChatEventAction extends ChatAction
 final case class Save(event: ChatEvent) extends ChatAction
-final case class Reply(msg: ChatCommandResponse) extends ChatAction with ChatActionEventAction
+final case class Reply(msg: ChatCommandResponse) extends ChatAction with ChatEventAction
+final case class UpdateUserChats(reply: Reply, userIds: Set[UserId], chatId: ChatId) extends ChatEventAction
 
 object ChatLogic {
   def commandToAction(state: ChatState, cmd: ChatCommand): Vector[ChatAction] = cmd match {
@@ -76,11 +77,12 @@ object ChatLogic {
       Vector(action)
   }
 
-  def updateState(state: ChatState, event: ChatEvent): (ChatState, Vector[ChatActionEventAction]) = event match {
+  def updateState(state: ChatState, event: ChatEvent): (ChatState, Vector[ChatEventAction]) = event match {
     case ChatCreatedEvent(userIds) =>
       val newState = state.withUserIds(userIds)
       println("update state ChatCreated")
-      newState -> Vector(Reply(ChatCreated(newState.chatId)))
+      val reply = Reply(ChatCreated(newState.chatId))
+      newState -> Vector(UpdateUserChats(reply, userIds, newState.chatId))
     case MessageAddedEvent(message) =>
       state.withMessageAdded(message) -> Vector(Reply(Confirm))
   }

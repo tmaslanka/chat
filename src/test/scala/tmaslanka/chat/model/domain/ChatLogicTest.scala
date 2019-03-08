@@ -10,6 +10,8 @@ class ChatLogicTest extends WordSpec with MustMatchers {
 
   type StateM = cats.data.State[ChatState, Vector[ChatAction]]
 
+  val replyChatCreated = Reply(ChatCreated(ChatId.create(createChatCommand.userIds)))
+
   "ChatLogic" should {
     "add chatUsers" in {
       runTest(ChatState())(for {
@@ -17,9 +19,9 @@ class ChatLogicTest extends WordSpec with MustMatchers {
         stateN <- State.get
       } yield {
         val userIds = createChatCommand.userIds
-        actions must have size 2
-        actions must contain allOf (Save(ChatCreatedEvent(userIds)), Reply(ChatCreated(ChatId.create(createChatCommand.userIds))))
         stateN mustEqual ChatState().copy(userIds = userIds)
+        actions must have size 2
+        actions must contain allOf (Save(ChatCreatedEvent(userIds)), UpdateUserChats(replyChatCreated, userIds, stateN.chatId))
       })
     }
 
@@ -31,7 +33,7 @@ class ChatLogicTest extends WordSpec with MustMatchers {
       } yield {
         val userIds = createChatCommand.userIds
         println(actions0)
-        actions mustEqual Vector(Reply(ChatCreated(ChatId.create(createChatCommand.userIds))))
+        actions mustEqual Vector(replyChatCreated)
         stateN mustEqual ChatState().copy(userIds = userIds)
       })
     }
@@ -147,18 +149,18 @@ class ChatLogicTest extends WordSpec with MustMatchers {
 
     def applyCommand(cmd: ChatCommand): StateM = cats.data.State { state =>
 
-      def handleChatEventAction(action: ChatActionEventAction): Unit = action match {
-        case Reply(msg) => // nop
+      def handleChatEventAction(action: ChatEventAction): Unit = action match {
+        case _ => // nop
       }
 
       val actions = ChatLogic.commandToAction(state, cmd)
-      val (newState, eventActions) = actions.foldLeft((state, Vector.empty[ChatActionEventAction]))({ case ((stateAcc, actionsAcc), action) =>
+      val (newState, eventActions) = actions.foldLeft((state, Vector.empty[ChatEventAction]))({ case ((stateAcc, actionsAcc), action) =>
         action match {
           case Save(event) =>
             val (newState, eventActions) = ChatLogic.updateState(stateAcc, event)
             eventActions.foreach(handleChatEventAction)
             newState -> (actionsAcc ++ eventActions)
-          case eventAction: ChatActionEventAction =>
+          case eventAction: ChatEventAction =>
             handleChatEventAction(eventAction)
             stateAcc -> actionsAcc
         }

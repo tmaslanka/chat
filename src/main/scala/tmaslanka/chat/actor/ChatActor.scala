@@ -6,6 +6,7 @@ import akka.stream.Materializer
 import tmaslanka.chat.actor.ChatActor.MessageAddedEvent
 import tmaslanka.chat.model.commands._
 import tmaslanka.chat.model.domain._
+import tmaslanka.chat.repository.UsersRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,7 +18,8 @@ object ChatActor {
   val chatMessageTag = "chatMessage"
 }
 
-class ChatActor(journalQueries: ChatQueries)(implicit ex: ExecutionContext) extends PersistentActor {
+class ChatActor(journalQueries: ChatQueries, usersRepository: UsersRepository)
+               (implicit ex: ExecutionContext) extends PersistentActor {
   import ChatActor._
   import akka.pattern.pipe
 
@@ -25,7 +27,7 @@ class ChatActor(journalQueries: ChatQueries)(implicit ex: ExecutionContext) exte
 
   var state = ChatState()
 
-  def updateState(event: ChatEvent): Vector[ChatActionEventAction] = {
+  def updateState(event: ChatEvent): Vector[ChatEventAction] = {
     val (newState, actions) = ChatLogic.updateState(state, event)
     state = newState
     actions
@@ -49,13 +51,18 @@ class ChatActor(journalQueries: ChatQueries)(implicit ex: ExecutionContext) exte
         updateState(event)
           .foreach(handleChatEventAction)
       }
-      case eventAction: ChatActionEventAction =>
+      case eventAction: ChatEventAction =>
         handleChatEventAction(eventAction)
     }
   }
 
-  def handleChatEventAction(action: ChatActionEventAction): Unit = action match {
+  def handleChatEventAction(action: ChatEventAction): Unit = action match {
     case Reply(msg) => sender() ! msg
+    case UpdateUserChats(reply, userIds, chatId) =>
+      Future.sequence(userIds.map(userId =>
+        //FIXME atMostOnce change to atLeastOnce
+        usersRepository.saveUserChat(userId, chatId)))
+        .map(_ => reply.msg).pipeTo(sender())
   }
 }
 

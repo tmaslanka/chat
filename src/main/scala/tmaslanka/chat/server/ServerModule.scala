@@ -6,7 +6,7 @@ import akka.persistence.query.PersistenceQuery
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import tmaslanka.chat.Settings
-import tmaslanka.chat.actor.{ActorSystemFactory, ChatQueries, Sharding}
+import tmaslanka.chat.actor._
 import tmaslanka.chat.repository.InMemoryUserRepository
 import tmaslanka.chat.services.{ChatService, UserService}
 
@@ -24,8 +24,13 @@ class ServerModule {
 
   val queries = new ChatQueries(cassandraReadJournal)
 
-  val userService = new UserService(new InMemoryUserRepository())
-  val chatService = new ChatService(Sharding.startSharding(settings, queries))
+  //todo chage to Cassandra repository
+  val userRepository = new InMemoryUserRepository()
+
+  val protocol = Sharding.startSharding(settings, () => new ChatActor(queries, userRepository))
+
+  val userService = new UserService(userRepository)
+  val chatService = new ChatService(protocol, userRepository)
 
   val routes = new Routes(settings, userService, chatService)
   val server = new Server(settings, routes)

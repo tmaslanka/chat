@@ -3,12 +3,20 @@ package tmaslanka.chat.services
 import tmaslanka.chat.actor.ShardingProtocol
 import tmaslanka.chat.model.commands._
 import tmaslanka.chat.model.domain.{ChatDescription, ChatId, UserId}
+import tmaslanka.chat.repository.UsersRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ChatService(protocol: ShardingProtocol)(implicit ex: ExecutionContext) {
+class ChatService(protocol: ShardingProtocol, usersRepository: UsersRepository)(implicit ex: ExecutionContext) {
 
-  def getUserChats(userId: UserId): Future[ChatsListResponse] = Future.successful(ChatsListResponse(Vector()))
+  def getUserChats(userId: UserId): Future[ChatsListResponse] = {
+    for {
+      chatIds <- usersRepository.findUserChats(userId)
+      queries = chatIds.map(getChatDescription)
+      queryResult <- Future.sequence(queries)
+      descriptions = queryResult.map(_.description)
+    } yield ChatsListResponse(descriptions)
+  }
 
   def createChat(command: CreateChatCommand): Future[ChatCommandResponse] = {
     val userIds = command.userIds
@@ -17,8 +25,7 @@ class ChatService(protocol: ShardingProtocol)(implicit ex: ExecutionContext) {
   }
 
   def getChat(chatId: ChatId): Future[ChatDescription] = {
-    protocol.query(chatId, GetChatDescription)
-      .mapTo[GetChatDescriptionResponse]
+    getChatDescription(chatId)
       .map(_.description)
   }
 
@@ -30,4 +37,8 @@ class ChatService(protocol: ShardingProtocol)(implicit ex: ExecutionContext) {
     protocol.command(chatId, createMessageCommand)
   }
 
+  private def getChatDescription(chatId: ChatId) = {
+    protocol.query(chatId, GetChatDescription)
+      .mapTo[GetChatDescriptionResponse]
+  }
 }

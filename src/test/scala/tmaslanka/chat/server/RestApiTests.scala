@@ -6,8 +6,7 @@ import akka.persistence.cassandra.testkit.CassandraLauncher
 import io.restassured.RestAssured._
 import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import io.restassured.response.ValidatableResponse
-import org.hamcrest.Matchers
-import org.hamcrest.Matchers.{hasItems, hasKey, is, not}
+import org.hamcrest.Matchers._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
 import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
 
@@ -71,7 +70,30 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     given()
       .get(s"v1/users/$userId/chats")
       .Then()
-      .body("chats", Matchers.hasSize(0))
+      .body("chats", hasSize(0))
+  }
+
+  "GET /v1/users/userId/chats" should "return one chat" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    val userIds = Set(bobId, aliceId)
+
+    val chatId = createChatForUsers(aliceId, bobId)
+
+    given()
+      .get(s"v1/users/$bobId/chats")
+      .Then()
+      .statusCode(200)
+      .body("chats", hasSize(1))
+      .bodyChatDescription(0, chatId, userIds)
+
+    given()
+      .get(s"v1/users/$aliceId/chats")
+      .Then()
+      .statusCode(200)
+      .body("chats", hasSize(1))
+      .bodyChatDescription(0, chatId, userIds)
   }
 
   "PUT /v1/chats/chatId" should "start chat for Bob and Alice" in {
@@ -169,7 +191,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
 
     getChatMessages(chatId)
       .Then()
-      .body("messages", Matchers.hasSize(3))
+      .body("messages", hasSize(3))
       .body("from", is(0))
       .bodyMessages(0, bob0Message)
       .bodyMessages(1, alice0Message)
@@ -198,26 +220,26 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
 
     getChatMessages(chatId, 3, 2)
       .Then()
-      .body("messages", Matchers.hasSize(2))
+      .body("messages", hasSize(2))
       .body("from", is(3))
       .bodyMessages(0, alice2Message)
       .bodyMessages(1, alice3Message)
 
     getChatMessages(chatId, 10, 2)
       .Then()
-      .body("messages", Matchers.hasSize(0))
+      .body("messages", hasSize(0))
       .body("from", is(10))
 
     getChatMessages(chatId, 4, 10)
       .Then()
-      .body("messages", Matchers.hasSize(2))
+      .body("messages", hasSize(2))
       .body("from", is(4))
       .bodyMessages(0, alice3Message)
       .bodyMessages(1, bob1Message)
 
     getChatMessages(chatId, 0, 3)
       .Then()
-      .body("messages", Matchers.hasSize(3))
+      .body("messages", hasSize(3))
       .body("from", is(0))
       .bodyMessages(0, bob0Message)
       .bodyMessages(1, alice0Message)
@@ -282,7 +304,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
   }
 
   private def isNotEmptyString = {
-    not(Matchers.isEmptyString)
+    not(isEmptyString)
   }
 
   private def unique(s: String): String = s"$s-${UUID.randomUUID()}"
@@ -293,6 +315,13 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
         .body(s"messages[$idx].userSeq", is(chatMessage.userSeq.toInt))
         .body(s"messages[$idx].text", is(chatMessage.text))
         .body(s"messages[$idx].userId", is(chatMessage.userId.value))
+    }
+
+    def bodyChatDescription(idx: Int, chatId: ChatId, userIds: Set[UserId]): ValidatableResponse = {
+      response
+        .body(s"chats[$idx].chatId", is(chatId.value))
+        .body(s"chats[$idx].userIds", hasSize(userIds.size))
+        .body(s"chats[$idx].userIds", containsInAnyOrder(userIds.map(_.value).toArray:_*))
     }
   }
 }

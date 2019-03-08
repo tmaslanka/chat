@@ -11,7 +11,7 @@ import tmaslanka.chat.model.StringValue
 import tmaslanka.chat.model.commands._
 import tmaslanka.chat.model.domain.ChatId
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 object ShardsNames {
@@ -23,8 +23,8 @@ object Sharding {
   //todo better id abstraction
   case class EntityEnvelope(id: StringValue, msg: Any)
 
-  def startSharding(settings: Settings, journalQueries: ChatQueries)
-                   (implicit system: ActorSystem, ex: ExecutionContext): ShardingProtocol = {
+  def startSharding(settings: Settings, chatActorCreator: () => ChatActor)
+                   (implicit system: ActorSystem): ShardingProtocol = {
 
     val extractEntityId: ShardRegion.ExtractEntityId = {
       case EntityEnvelope(id, msg) => (id.value, msg)
@@ -39,7 +39,7 @@ object Sharding {
       math.abs(id.hashCode % settings.numberOfShards).toString
     }
 
-    Vector((ShardsNames.chat, Props(new ChatActor(journalQueries)))).
+    Vector((ShardsNames.chat, Props(chatActorCreator()))).
       foreach { case (shardType, props) =>
         ClusterSharding(system).start(
           typeName = shardType,

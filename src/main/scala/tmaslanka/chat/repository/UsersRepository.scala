@@ -1,17 +1,21 @@
 package tmaslanka.chat.repository
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
-import tmaslanka.chat.model.domain.{User, UserId, UserName}
+import tmaslanka.chat.model.domain.{ChatId, User, UserId, UserName}
 
 import scala.collection._
 import scala.concurrent.Future
 
 trait UsersRepository {
-
   def createIfNotExists(user: User): Future[Boolean]
 
-  def getUser(userId: UserId): Future[Option[User]]
+  def findUser(userId: UserId): Future[Option[User]]
+
+  def saveUserChat(userId: UserId, chatId: ChatId): Future[Unit]
+
+  def findUserChats(userId: UserId): Future[Vector[ChatId]]
 }
 
 class InMemoryUserRepository extends UsersRepository {
@@ -19,6 +23,9 @@ class InMemoryUserRepository extends UsersRepository {
   val users: concurrent.Map[UserId, User] = new ConcurrentHashMap[UserId, User]().asScala
 
   val userNamesToUserId: concurrent.Map[UserName, UserId] = new ConcurrentHashMap[UserName, UserId]().asScala
+
+  val userIdToChatId: concurrent.Map[UserId, AtomicReference[Vector[ChatId]]] =
+    new ConcurrentHashMap[UserId, AtomicReference[Vector[ChatId]]]().asScala
 
   override def createIfNotExists(user: User): Future[Boolean] = Future.successful {
     users.get(user.userId) match {
@@ -33,7 +40,16 @@ class InMemoryUserRepository extends UsersRepository {
     }
   }
 
-  override def getUser(userId: UserId): Future[Option[User]] = Future.successful {
+  override def findUser(userId: UserId): Future[Option[User]] = Future.successful {
     users.get(userId)
+  }
+
+  override def saveUserChat(userId: UserId, chatId: ChatId): Future[Unit] = Future.successful {
+    userIdToChatId.putIfAbsent(userId, new AtomicReference(Vector.empty[ChatId]))
+    userIdToChatId.get(userId).foreach(_.accumulateAndGet(Vector(chatId), (v1, v2) => v1 ++ v2))
+  }
+
+  override def findUserChats(userId: UserId): Future[Vector[ChatId]] = Future.successful {
+    userIdToChatId.get(userId).map(_.get()).getOrElse(Vector.empty)
   }
 }
