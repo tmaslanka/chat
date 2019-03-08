@@ -35,6 +35,8 @@ fork in ItTest := false
 
 val akkaV = "2.5.21"
 val akkaHttpV = "10.1.7"
+val akkaCassandraV =  "0.93"
+val cassandraLauncherV = "0.93"
 val logbackV = "1.2.3"
 val slf4jV = "1.7.25"
 val scalaLoggingV = "3.9.0"
@@ -50,6 +52,10 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           %% "akka-actor" % akkaV,
   "com.typesafe.akka"           %% "akka-stream" % akkaV,
   "com.typesafe.akka"           %% "akka-cluster-sharding" % akkaV,
+  "com.typesafe.akka"           %% "akka-persistence" % akkaV,
+  "com.typesafe.akka"           %% "akka-persistence-query" % akkaV,
+  "com.typesafe.akka"           %% "akka-persistence-cassandra"  % akkaCassandraV,
+  "com.typesafe.akka"           %% "akka-persistence-cassandra-launcher" % cassandraLauncherV % "test,it-test",
 
   "org.typelevel"               %% "cats-core" % catsV,
 

@@ -1,12 +1,13 @@
 package tmaslanka.chat.actor
 
 import akka.persistence.PersistentActor
-import tmaslanka.chat.model.commands.{ChatCommand, ChatMessage, Confirm}
+import tmaslanka.chat.model.commands.{ChatCommand, ChatMessage}
 import tmaslanka.chat.model.domain._
 
 object ChatActor {
   sealed trait ChatEvent
-  case class MessageAdded(message: ChatMessage) extends ChatEvent
+  case class MessageAddedEvent(message: ChatMessage) extends ChatEvent
+  case class ChatCreatedEvent(userIds: Set[UserId]) extends ChatEvent
 }
 
 class ChatActor extends PersistentActor {
@@ -16,8 +17,10 @@ class ChatActor extends PersistentActor {
 
   var state = ChatState()
 
-  def updateState(event: ChatEvent): Unit = {
-    state = ChatLogic.updateState(state, event)
+  def updateState(event: ChatEvent): Vector[ChatActionEventAction] = {
+    val (newState, actions) = ChatLogic.updateState(state, event)
+    state = newState
+    actions
   }
 
   override def receiveRecover: Receive = {
@@ -33,9 +36,14 @@ class ChatActor extends PersistentActor {
     ChatLogic.commandToAction(state, cmd).foreach {
       case Save(event) => persist(event) { event =>
         updateState(event)
-        sender() ! Confirm
+          .foreach(handleChatEventAction)
       }
-      case Reply(msg) => sender() ! msg
+      case eventAction: ChatActionEventAction =>
+        handleChatEventAction(eventAction)
     }
+  }
+
+  def handleChatEventAction(action: ChatActionEventAction): Unit = action match {
+    case Reply(msg) => sender() ! msg
   }
 }

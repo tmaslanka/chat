@@ -27,9 +27,11 @@ class Routes(userService: UserService,
     } ~
     pathPrefix(Segment) { userIdParam =>
       val userId = UserId(userIdParam)
-      (pathEnd & get) {
-        complete(userService.getUser(userId)
-          .map(resourceGetToResponse))
+      pathEndOrSingleSlash {
+        get {
+          complete(userService.getUser(userId)
+            .map(resourceGetToResponse))
+          }
       } ~
       path("chats") {
         complete(chatService.getUserChats(userId))
@@ -38,10 +40,19 @@ class Routes(userService: UserService,
   }
 
   def chats: Route = pathPrefix("chats") {
+    pathEndOrSingleSlash {
+      put {
+        entity(as[CreateChatCommand]) { command =>
+          onSuccess(chatService.createChat(command))(completeChatCommandResponse)
+        }
+      }
+    } ~
     pathPrefix(Segment) { chatIdParam =>
       val chatId = ChatId(chatIdParam)
-      (pathEnd & get) {
-        complete(chatService.getChat(chatId))
+      pathEndOrSingleSlash {
+        get {
+          complete(chatService.getChat(chatId))
+        }
       } ~
       path("messages") {
         get {
@@ -49,10 +60,7 @@ class Routes(userService: UserService,
         } ~
         put {
           entity(as[AddMessageCommand]) { command =>
-            complete(chatService.appendMessage(chatId, command).map {
-              case Confirm => StatusCodes.OK
-              case Reject => StatusCodes.RetryWith
-            })
+            onSuccess(chatService.appendMessage(chatId, command))(completeChatCommandResponse)
           }
         }
       }
@@ -68,5 +76,12 @@ class Routes(userService: UserService,
   private def resourceGetToResponse[A](maybeData: Option[A]): (StatusCode, Option[A]) = maybeData match {
     case Some(data) => StatusCodes.OK -> Some(data)
     case None => StatusCodes.NotFound -> None
+  }
+
+  private def completeChatCommandResponse(response: ChatCommandResponse) = response match {
+    case Confirm => complete(StatusCodes.OK)
+    case Reject => complete(StatusCodes.RetryWith)
+    case UnAuthorized => complete(StatusCodes.Unauthorized)
+    case response: ChatCreated => complete(response)
   }
 }

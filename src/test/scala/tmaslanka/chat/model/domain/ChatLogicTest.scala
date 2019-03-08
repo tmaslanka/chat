@@ -2,34 +2,88 @@ package tmaslanka.chat.model.domain
 
 import cats.data.State
 import org.scalatest.{MustMatchers, WordSpec}
-import tmaslanka.chat.actor.ChatActor.MessageAdded
-import tmaslanka.chat.model.commands.{ChatCommand, Confirm, Reject}
+import tmaslanka.chat.actor.ChatActor.{ChatCreatedEvent, MessageAddedEvent}
+import tmaslanka.chat.model.commands._
 
 class ChatLogicTest extends WordSpec with MustMatchers {
   import ExampleObjects._
 
-  type StateM = cats.data.State[ChatState, Vector[ChatCommandAction]]
+  type StateM = cats.data.State[ChatState, Vector[ChatAction]]
 
   "ChatLogic" should {
-    "add message" in {
+    "add chatUsers" in {
       runTest(ChatState())(for {
+        actions <- applyCommand(createChatCommand)
+        stateN <- State.get
+      } yield {
+        val userIds = createChatCommand.userIds
+        actions must have size 2
+        actions must contain allOf (Save(ChatCreatedEvent(userIds)), Reply(ChatCreated(ChatId.create(createChatCommand.userIds))))
+        stateN mustEqual ChatState().copy(userIds = userIds)
+      })
+    }
+
+    "confirm duplicated createChat" in {
+      runTest(ChatState())(for {
+        actions0 <- applyCommand(createChatCommand)
+        actions <- applyCommand(createChatCommand)
+        stateN <- State.get
+      } yield {
+        val userIds = createChatCommand.userIds
+        println(actions0)
+        actions mustEqual Vector(Reply(ChatCreated(ChatId.create(createChatCommand.userIds))))
+        stateN mustEqual ChatState().copy(userIds = userIds)
+      })
+    }
+
+    "reject modification to chat participants" in {
+      runTest(ChatState())(for {
+        _ <- applyCommand(createChatCommand)
+        actions <- applyCommand(createChatCommand.copy(userIds = createChatCommand.userIds.map(_.value + "-modified").map(UserId)))
+        stateN <- State.get
+      } yield {
+        actions mustEqual Vector(Reply(Reject))
+        stateN mustEqual ChatState().copy(userIds = createChatCommand.userIds)
+      })
+    }
+
+    "reject message if not from chat participant" in {
+      val state0 = ChatState()
+      runTest(state0)(for{
         actions <- applyCommand(addMessageCommand)
         state1 <- State.get
       } yield {
-        actions mustEqual Vector(Save(MessageAdded(addMessageCommand.message)))
+        actions mustEqual Vector(Reply(UnAuthorized))
+        state1 mustEqual state0
+      })
+    }
+
+    "add message" in {
+      runTest(chatState)(for {
+        actions <- applyCommand(addMessageCommand)
+        state1 <- State.get
+      } yield {
+        actions mustEqual Vector(Save(MessageAddedEvent(addMessageCommand.message)), Reply(Confirm))
 
         state1.lastMessageId mustEqual 0
         state1.userLastMessages mustEqual Map(userId -> addMessageCommand.message)
       })
     }
 
-    "not add the same message" in {
-      val command = addMessageCommand.copy(message = chatState.userLastMessages(userId))
-      ChatLogic.commandToAction(chatState, command) mustEqual Vector(Reply(Confirm))
+    "not add the same message twice" in {
+      runTest(chatState)(for {
+        _ <- applyCommand(addMessageCommand)
+        state1 <- State.get
+        actions <- applyCommand(addMessageCommand)
+        stateN <- State.get
+      } yield {
+        actions mustEqual Vector(Reply(Confirm))
+        stateN mustEqual state1
+      })
     }
 
     "not add previous message" in {
-      runTest(ChatState())(for {
+      runTest(chatState)(for {
         _ <- applyCommand(addMessageCommand)
         _ <- applyCommand(addMessageCommand.copy(message = secondChatMessage))
         previousMessageActions <- applyCommand(addMessageCommand)
@@ -43,7 +97,7 @@ class ChatLogicTest extends WordSpec with MustMatchers {
     }
 
     "not add future message" in {
-      val state0 = ChatState()
+      val state0 = chatState
       runTest(state0)(for {
         actions <- applyCommand(next(addMessageCommand))
         stateN <- State.get
@@ -53,8 +107,8 @@ class ChatLogicTest extends WordSpec with MustMatchers {
       })
     }
 
-    "add messages from different users" in {
-      runTest(ChatState())(for {
+    "add messages from many chat participants" in {
+      runTest(chatState)(for {
         _ <- applyCommand(addMessageCommand)
         _ <- applyCommand(otherUserAddMessage)
         _ <- State.inspect { state: ChatState =>
@@ -78,13 +132,24 @@ class ChatLogicTest extends WordSpec with MustMatchers {
 
 
     def applyCommand(cmd: ChatCommand): StateM = cats.data.State { state =>
+
+      def handleChatEventAction(action: ChatActionEventAction): Unit = action match {
+        case Reply(msg) => // nop
+      }
+
       val actions = ChatLogic.commandToAction(state, cmd)
-      actions.foldLeft(state)({ (s, action) =>
+      val (newState, eventActions) = actions.foldLeft((state, Vector.empty[ChatActionEventAction]))({ case ((stateAcc, actionsAcc), action) =>
         action match {
-          case Save(event) => ChatLogic.updateState(s, event)
-          case Reply(_) => s
+          case Save(event) =>
+            val (newState, eventActions) = ChatLogic.updateState(stateAcc, event)
+            eventActions.foreach(handleChatEventAction)
+            newState -> (actionsAcc ++ eventActions)
+          case eventAction: ChatActionEventAction =>
+            handleChatEventAction(eventAction)
+            stateAcc -> actionsAcc
         }
-      }) -> actions
+      })
+      newState -> (actions ++ eventActions)
     }
 
     def runTest[A](state: ChatState)(stateM: cats.data.State[ChatState, A]) = {

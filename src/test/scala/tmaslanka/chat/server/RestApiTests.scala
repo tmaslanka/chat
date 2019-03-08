@@ -2,15 +2,21 @@ package tmaslanka.chat.server
 
 import java.util.UUID
 
+import akka.persistence.cassandra.testkit.CassandraLauncher
 import io.restassured.RestAssured._
 import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import org.hamcrest.Matchers
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
-import tmaslanka.chat.model.domain.UserId
+import tmaslanka.chat.model.commands.ChatMessage
+import tmaslanka.chat.model.domain.{ChatId, UserId}
 
 class RestApiTests extends FlatSpec with BeforeAndAfterAll {
 
   val `application/json` = "application/json"
+
+  CassandraLauncher.start(new java.io.File("target/cassandra"),
+    CassandraLauncher.DefaultTestConfigResource, clean = true, port = 9042)
+
 
   val server = new ServerModule().server
   server.start()
@@ -67,6 +73,51 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body("chats", Matchers.hasSize(0))
   }
 
+  "PUT /v1/chat/chatId" should "start chat for Bob and Alice" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    putChatForUsers(bobId, aliceId)
+      .Then()
+      .statusCode(200)
+      .body("chatId", isNotEmptyString)
+  }
+
+  "PUT /v1/chat/chatId" should "be idempotent" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    val chatId = createChatForUsers(bobId, aliceId)
+
+    putChatForUsers(aliceId, bobId)
+      .Then()
+      .statusCode(200)
+      .body("chatId", Matchers.is(chatId.value))
+  }
+
+  "PUT /v1/chat/chatId" should "be idempotent also" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    val chatId = createChatForUsers(bobId, aliceId)
+
+    putChatForUsers(bobId, aliceId)
+      .Then()
+      .statusCode(200)
+      .body("chatId", Matchers.is(chatId.value))
+  }
+
+  "PUT /v1/chat/chatId/messages" should "add append message to chat" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    val chatId = createChatForUsers(bobId, aliceId)
+
+    putMessageToChat(chatId, ChatMessage(0, bobId, "text-0"))
+      .Then()
+      .statusCode(200)
+  }
+
   private def createUser(userName: String): UserId = {
     val userId = putUser(userName).body().path[String]("userId")
     UserId(userId)
@@ -78,6 +129,40 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body(s""" {"userName": "$userName"} """)
       .when()
       .put("v1/users")
+  }
+
+  private def createChatForUsers(firstUserId: UserId, secondUserId: UserId) = {
+    val chatId = putChatForUsers(firstUserId, secondUserId)
+      .body()
+      .path[String]("chatId")
+    ChatId(chatId)
+  }
+
+  private def putChatForUsers(firstUserId: UserId, secondUserId: UserId) = {
+    given()
+      .contentType(`application/json`)
+      .body(
+        s"""
+           |{
+           |  "userIds": ["$firstUserId", "$secondUserId"]
+           |}
+         """.stripMargin)
+      .when()
+      .put("v1/chats")
+  }
+
+  private def putMessageToChat(chatId: ChatId, message: ChatMessage) = {
+    given()
+      .contentType(`application/json`)
+      .body(
+        s""" {
+           |"message": {
+           |    "seq": ${message.seq},
+           |    "userId": "${message.userId}",
+           |    "text": "${message.text}"
+           |  }
+           |} """.stripMargin)
+      .put(s"v1/chats/$chatId/messages")
   }
 
   private def isNotEmptyString = {

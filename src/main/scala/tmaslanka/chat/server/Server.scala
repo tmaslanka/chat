@@ -25,7 +25,8 @@ class Server(settings: Settings,
         complete("I am here")
     } ~
     pathPrefix("v1") {
-      routes.users
+      routes.users ~
+      routes.chats
     }
   }
   // @formatter:on
