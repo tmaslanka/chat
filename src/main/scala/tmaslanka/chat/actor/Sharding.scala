@@ -3,15 +3,15 @@ package tmaslanka.chat.actor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.cluster.sharding.ShardRegion.ShardId
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings, ShardRegion}
-import tmaslanka.chat.actor.Sharding.EntityEnvelope
-import tmaslanka.chat.model.StringValue
-import tmaslanka.chat.model.commands.{ChatCommand, ChatCommandResponse}
-import tmaslanka.chat.model.domain.ChatId
+import akka.pattern.{ask => akkaAsk}
 import akka.util.Timeout
 import tmaslanka.chat.Settings
-import akka.pattern.{ask => akkaAsk}
+import tmaslanka.chat.actor.Sharding.EntityEnvelope
+import tmaslanka.chat.model.StringValue
+import tmaslanka.chat.model.commands._
+import tmaslanka.chat.model.domain.ChatId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 object ShardsNames {
@@ -19,10 +19,13 @@ object ShardsNames {
 }
 
 object Sharding {
+
   //todo better id abstraction
   case class EntityEnvelope(id: StringValue, msg: Any)
 
-  def startSharding(settings: Settings)(implicit system: ActorSystem): ShardingProtocol = {
+  def startSharding(settings: Settings, journalQueries: JournalQueries)
+                   (implicit system: ActorSystem, ex: ExecutionContext): ShardingProtocol = {
+
     val extractEntityId: ShardRegion.ExtractEntityId = {
       case EntityEnvelope(id, msg) => (id.value, msg)
     }
@@ -36,7 +39,7 @@ object Sharding {
       math.abs(id.hashCode % settings.numberOfShards).toString
     }
 
-    Vector((ShardsNames.chat, Props[ChatActor])).
+    Vector((ShardsNames.chat, Props(new ChatActor(journalQueries)))).
       foreach { case (shardType, props) =>
         ClusterSharding(system).start(
           typeName = shardType,
@@ -54,11 +57,16 @@ object Sharding {
 class ShardingProtocol(implicit system: ActorSystem, askTimeout: Timeout) {
   val chatShardRegion: ActorRef =  ClusterSharding(system).shardRegion(ShardsNames.chat)
 
-  def tell(chatId: ChatId, msg: ChatCommand)(implicit sender: ActorRef = ActorRef.noSender): Unit = {
-    chatShardRegion ! EntityEnvelope(chatId, msg)
+  def command(chatId: ChatId, msg: ChatCommand)(implicit sender: ActorRef = ActorRef.noSender): Future[ChatCommandResponse] = {
+    askChat(chatId, msg).mapTo[ChatCommandResponse]
   }
 
-  def ask(chatId: ChatId, msg: ChatCommand)(implicit sender: ActorRef = ActorRef.noSender): Future[ChatCommandResponse] = {
-    (chatShardRegion ? EntityEnvelope(chatId, msg)).mapTo[ChatCommandResponse]
+  def query(chatId: ChatId, query: ChatQuery)(implicit sender: ActorRef = ActorRef.noSender): Future[ChatQueryResponse] = {
+    askChat(chatId, query).mapTo[ChatQueryResponse]
   }
+
+  private def askChat(chatId: ChatId, msg: Any)(implicit sender: ActorRef) = {
+    chatShardRegion ? EntityEnvelope(chatId, msg)
+  }
+
 }

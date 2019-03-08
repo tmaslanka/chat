@@ -68,7 +68,7 @@ class ChatLogicTest extends WordSpec with MustMatchers {
         actions mustEqual Vector(Reply(UnAuthorized))
 
         state1.userLastMessages mustBe empty
-        state1.lastMessageId mustEqual -1
+        state1.lastSeq mustEqual -1
       })
     }
 
@@ -79,7 +79,7 @@ class ChatLogicTest extends WordSpec with MustMatchers {
       } yield {
         actions mustEqual Vector(Save(MessageAddedEvent(addMessageCommand.message)), Reply(Confirm))
 
-        state1.lastMessageId mustEqual 0
+        state1.lastSeq mustEqual 0
         state1.userLastMessages mustEqual Map(userId -> addMessageCommand.message)
       })
     }
@@ -105,7 +105,7 @@ class ChatLogicTest extends WordSpec with MustMatchers {
       } yield {
         previousMessageActions mustEqual Vector(Reply(Confirm))
 
-        stateN.lastMessageId mustEqual 1
+        stateN.lastSeq mustEqual 1
         stateN.userLastMessages mustEqual Map(userId -> secondChatMessage)
       })
     }
@@ -126,7 +126,7 @@ class ChatLogicTest extends WordSpec with MustMatchers {
         _ <- applyCommand(addMessageCommand)
         _ <- applyCommand(otherUserAddMessage)
         _ <- State.inspect { state: ChatState =>
-          state.lastMessageId mustEqual 1
+          state.lastSeq mustEqual 1
           state.userLastMessages mustEqual Map(
             userId -> addMessageCommand.message,
             otherUserId -> otherUserMessage
@@ -137,7 +137,7 @@ class ChatLogicTest extends WordSpec with MustMatchers {
         _ <- applyCommand(next(otherUserAddMessage))
         stateN <- State.get
       } yield {
-        stateN.lastMessageId mustEqual 4
+        stateN.lastSeq mustEqual 4
         stateN.userLastMessages mustEqual Map(
           userId -> next(next(addMessageCommand.message)),
           otherUserId -> next(otherUserAddMessage.message))

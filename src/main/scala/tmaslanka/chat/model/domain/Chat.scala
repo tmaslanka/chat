@@ -16,12 +16,13 @@ object ChatId {
 
 final case class ChatDescription(chatId: ChatId, userIds: Set[UserId], lastMessage: String)
 
+final case class ChatMessage(userSeq: Long, userId: UserId, text: String)
 
-final case class ChatState(lastMessageId: Long = -1, userIds: Set[UserId] = Set(), userLastMessages: Map[UserId, ChatMessage] = Map()) {
+final case class ChatState(lastSeq: Long = -1, userIds: Set[UserId] = Set(), userLastMessages: Map[UserId, ChatMessage] = Map()) {
   def withUserIds(userIds: Set[UserId]): ChatState = copy(userIds = userIds)
 
   def withMessageAdded(message: ChatMessage): ChatState = copy(
-    lastMessageId = lastMessageId + 1,
+    lastSeq = lastSeq + 1,
     userLastMessages = userLastMessages.updated(message.userId, message))
 
   def chatId: ChatId = ChatId.create(userIds)
@@ -54,13 +55,13 @@ object ChatLogic {
       } else {
         val lastSeq = state.userLastMessages.get(userId) match {
           case Some(previous) =>
-            previous.seq
+            previous.userSeq
           case None => -1
         }
 
-        if (lastSeq + 1 == message.seq) {
+        if (lastSeq + 1 == message.userSeq) {
           Save(MessageAddedEvent(message))
-        } else if (lastSeq < message.seq) {
+        } else if (lastSeq < message.userSeq) {
           Reply(Reject)
         } else {
           Reply(Confirm)

@@ -3,6 +3,7 @@ package tmaslanka.chat.server
 import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import tmaslanka.chat.Settings
 import tmaslanka.chat.model.commands._
 import tmaslanka.chat.model.domain.{ChatId, UserId}
 import tmaslanka.chat.model.json.JsonSupport
@@ -10,7 +11,8 @@ import tmaslanka.chat.services.{ChatService, UserService}
 
 import scala.concurrent.ExecutionContext
 
-class Routes(userService: UserService,
+class Routes(settings: Settings,
+             userService: UserService,
              chatService: ChatService)
             (implicit ex: ExecutionContext) extends JsonSupport {
 
@@ -56,7 +58,11 @@ class Routes(userService: UserService,
       } ~
       path("messages") {
         get {
-          complete(chatService.getChatMessages(chatId))
+          parameters(('from.as[Int].?, 'limit.as[Int].?)) { (maybeFrom, maybeLimit) =>
+              val from = maybeFrom.getOrElse(0)
+              val limit = maybeLimit.getOrElse(settings.`chat-messages-query-limit`)
+              complete(chatService.getChatMessages(chatId, from, limit))
+          }
         } ~
         put {
           entity(as[AddMessageCommand]) { command =>

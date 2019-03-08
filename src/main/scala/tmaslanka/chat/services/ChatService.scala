@@ -14,15 +14,17 @@ class ChatService(protocol: ShardingProtocol) {
 
   def createChat(command: CreateChatCommand): Future[ChatCommandResponse] = {
     val chatId = ChatId.create(command.userIds)
-    protocol.ask(chatId, command).mapTo[ChatCommandResponse]
+    protocol.command(chatId, command).mapTo[ChatCommandResponse]
   }
 
   def getChat(chatId: ChatId) = response
 
-  def getChatMessages(chatId: ChatId) = response
+  def getChatMessages(chatId: ChatId, from: Long, limit: Long): Future[GetChatMessagesResponse] = {
+    protocol.query(chatId, GetChatMessages(from, limit)).mapTo[GetChatMessagesResponse]
+  }
 
   def appendMessage(chatId: ChatId, createMessageCommand: AddMessageCommand): Future[ChatCommandResponse] = {
-    protocol.ask(chatId, createMessageCommand)
+    protocol.command(chatId, createMessageCommand)
   }
 
 }

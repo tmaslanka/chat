@@ -66,8 +66,8 @@ libraryDependencies ++= Seq(
   "com.typesafe"                %  "config" % typesafeConfigV,
 
   "org.scalatest"               %% "scalatest" % scalatestV % "test,it-test",
-  "io.rest-assured"             % "rest-assured" % restAssuredV % "it-test",
-  "io.rest-assured"             % "scala-support" % restAssuredV % "it-test"
+  "io.rest-assured"             % "rest-assured" % restAssuredV % "test,it-test",
+  "io.rest-assured"             % "scala-support" % restAssuredV % "test,it-test"
 )
 
 configs(ItTest)

@@ -5,10 +5,10 @@ import java.util.UUID
 import akka.persistence.cassandra.testkit.CassandraLauncher
 import io.restassured.RestAssured._
 import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
+import io.restassured.response.ValidatableResponse
 import org.hamcrest.Matchers
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
-import tmaslanka.chat.model.commands.ChatMessage
-import tmaslanka.chat.model.domain.{ChatId, UserId}
+import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
 
 class RestApiTests extends FlatSpec with BeforeAndAfterAll {
 
@@ -129,6 +129,77 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .statusCode(404)
   }
 
+  "GET /v1/chats/chatId/messages" should "return chat messages" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    val chatId = createChatForUsers(bobId, aliceId)
+
+    val bob0Message = ChatMessage(0, bobId, "bob-0")
+    val alice0Message = ChatMessage(0, aliceId, "alice-0")
+    val alice1Message = ChatMessage(1, aliceId, "alice-1")
+
+    putMessageToChat(chatId, bob0Message)
+    putMessageToChat(chatId, alice0Message)
+    putMessageToChat(chatId, alice1Message)
+
+    getChatMessages(chatId)
+      .Then()
+      .body("messages", Matchers.hasSize(3))
+      .body("from", Matchers.is(0))
+      .bodyMessages(0, bob0Message)
+      .bodyMessages(1, alice0Message)
+      .bodyMessages(2, alice1Message)
+  }
+
+  "GET /v1/chats/chatId/messages" should "return limited no of messages" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    val chatId = createChatForUsers(bobId, aliceId)
+
+    val bob0Message = ChatMessage(0, bobId, "bob-0")
+    val bob1Message = ChatMessage(1, bobId, "bob-1")
+    val alice0Message = ChatMessage(0, aliceId, "alice-0")
+    val alice1Message = ChatMessage(1, aliceId, "alice-1")
+    val alice2Message = ChatMessage(2, aliceId, "alice-2")
+    val alice3Message = ChatMessage(3, aliceId, "alice-3")
+
+    putMessageToChat(chatId, bob0Message)
+    putMessageToChat(chatId, alice0Message)
+    putMessageToChat(chatId, alice1Message)
+    putMessageToChat(chatId, alice2Message)
+    putMessageToChat(chatId, alice3Message)
+    putMessageToChat(chatId, bob1Message)
+
+    getChatMessages(chatId, 3, 2)
+      .Then()
+      .body("messages", Matchers.hasSize(2))
+      .body("from", Matchers.is(3))
+      .bodyMessages(0, alice2Message)
+      .bodyMessages(1, alice3Message)
+
+    getChatMessages(chatId, 10, 2)
+      .Then()
+      .body("messages", Matchers.hasSize(0))
+      .body("from", Matchers.is(10))
+
+    getChatMessages(chatId, 4, 10)
+      .Then()
+      .body("messages", Matchers.hasSize(2))
+      .body("from", Matchers.is(4))
+      .bodyMessages(0, alice3Message)
+      .bodyMessages(1, bob1Message)
+
+    getChatMessages(chatId, 0, 3)
+      .Then()
+      .body("messages", Matchers.hasSize(3))
+      .body("from", Matchers.is(0))
+      .bodyMessages(0, bob0Message)
+      .bodyMessages(1, alice0Message)
+      .bodyMessages(2, alice1Message)
+  }
+
   private def createUser(userName: String): UserId = {
     val userId = putUser(userName).body().path[String]("userId")
     UserId(userId)
@@ -168,7 +239,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body(
         s""" {
            |"message": {
-           |    "seq": ${message.seq},
+           |    "userSeq": ${message.userSeq},
            |    "userId": "${message.userId}",
            |    "text": "${message.text}"
            |  }
@@ -176,9 +247,28 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .put(s"v1/chats/$chatId/messages")
   }
 
+  private def getChatMessages(chatId: ChatId) = {
+    given()
+      .get(s"v1/chats/$chatId/messages")
+  }
+
+  private def getChatMessages(chatId: ChatId, from: Long, limit: Long) = {
+    given()
+      .get(s"v1/chats/$chatId/messages?from=$from&limit=$limit")
+  }
+
   private def isNotEmptyString = {
     Matchers.not(Matchers.isEmptyString)
   }
 
   private def unique(s: String): String = s"$s-${UUID.randomUUID()}"
+
+  implicit class ValidatableResponseOps(response: ValidatableResponse) {
+    def bodyMessages(idx: Int, chatMessage: ChatMessage): ValidatableResponse = {
+      response
+        .body(s"messages[$idx].userSeq", Matchers.is(chatMessage.userSeq.toInt))
+        .body(s"messages[$idx].text", Matchers.is(chatMessage.text))
+        .body(s"messages[$idx].userId", Matchers.is(chatMessage.userId.value))
+    }
+  }
 }

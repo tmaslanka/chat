@@ -1,6 +1,6 @@
 package tmaslanka.chat.model.domain
 
-import tmaslanka.chat.model.commands.{AddMessageCommand, ChatMessage, CreateChatCommand}
+import tmaslanka.chat.model.commands.{AddMessageCommand, CreateChatCommand}
 
 object ExampleObjects {
   val userId = UserId("some-user-id")
@@ -24,8 +24,8 @@ object ExampleObjects {
   val otherUserAddMessage = addMessageCommand.copy(message = otherUserMessage)
 
   def next(message: ChatMessage): ChatMessage = {
-    val nextSeq = message.seq + 1
-    message.copy(seq = nextSeq, text = s"text-$nextSeq")
+    val nextSeq = message.userSeq + 1
+    message.copy(userSeq = nextSeq, text = s"text-$nextSeq")
   }
 
   def next(addMessageCommand: AddMessageCommand): AddMessageCommand = {
