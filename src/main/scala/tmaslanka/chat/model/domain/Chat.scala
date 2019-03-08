@@ -35,7 +35,7 @@ final case class Reply(msg: ChatCommandResponse) extends ChatAction with ChatAct
 object ChatLogic {
   def commandToAction(state: ChatState, cmd: ChatCommand): Vector[ChatAction] = cmd match {
     case CreateChatCommand(userIds) =>
-      val action = if(state.userIds.isEmpty) {
+      val action = if (state.userIds.isEmpty) {
         Save(ChatCreatedEvent(userIds))
       } else if (state.userIds == userIds) {
         println("commandToAction ChatCreated")
@@ -47,7 +47,9 @@ object ChatLogic {
 
     case AddMessageCommand(message) =>
       val userId = message.userId
-      val action = if (!state.userIds(userId)) {
+      val action = if(state.userIds.isEmpty) {
+        Reply(NotFound)
+      } else if (!state.userIds(userId)) {
         Reply(UnAuthorized)
       } else {
         val lastSeq = state.userLastMessages.get(userId) match {

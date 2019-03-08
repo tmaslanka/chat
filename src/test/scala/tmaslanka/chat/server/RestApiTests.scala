@@ -73,7 +73,9 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body("chats", Matchers.hasSize(0))
   }
 
-  "PUT /v1/chat/chatId" should "start chat for Bob and Alice" in {
+  //todo more tests /v1/users/userId/chats
+
+  "PUT /v1/chats/chatId" should "start chat for Bob and Alice" in {
     val bobId = createUser(unique("Bob"))
     val aliceId = createUser(unique("Alice"))
 
@@ -83,7 +85,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body("chatId", isNotEmptyString)
   }
 
-  "PUT /v1/chat/chatId" should "be idempotent" in {
+  "PUT /v1/chats/chatId" should "be idempotent" in {
     val bobId = createUser(unique("Bob"))
     val aliceId = createUser(unique("Alice"))
 
@@ -95,7 +97,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body("chatId", Matchers.is(chatId.value))
   }
 
-  "PUT /v1/chat/chatId" should "be idempotent also" in {
+  "PUT /v1/chats/chatId" should "be idempotent also" in {
     val bobId = createUser(unique("Bob"))
     val aliceId = createUser(unique("Alice"))
 
@@ -107,7 +109,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .body("chatId", Matchers.is(chatId.value))
   }
 
-  "PUT /v1/chat/chatId/messages" should "add append message to chat" in {
+  "PUT /v1/chats/chatId/messages" should "append message to chat" in {
     val bobId = createUser(unique("Bob"))
     val aliceId = createUser(unique("Alice"))
 
@@ -116,6 +118,15 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     putMessageToChat(chatId, ChatMessage(0, bobId, "text-0"))
       .Then()
       .statusCode(200)
+  }
+
+  "PUT /v1/chats/chatId/messages" should "return 404 when chat is not started" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    putMessageToChat(ChatId.create(Set(bobId, aliceId)), ChatMessage(0, bobId, "text-0"))
+      .Then()
+      .statusCode(404)
   }
 
   private def createUser(userName: String): UserId = {

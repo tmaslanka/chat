@@ -80,7 +80,8 @@ class Routes(userService: UserService,
 
   private def completeChatCommandResponse(response: ChatCommandResponse) = response match {
     case Confirm => complete(StatusCodes.OK)
-    case Reject => complete(StatusCodes.RetryWith)
+    case NotFound => complete(StatusCodes.NotFound)
+    case Reject => complete(StatusCodes.BadRequest)
     case UnAuthorized => complete(StatusCodes.Unauthorized)
     case response: ChatCreated => complete(response)
   }

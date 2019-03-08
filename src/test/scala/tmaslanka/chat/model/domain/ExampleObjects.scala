@@ -5,6 +5,7 @@ import tmaslanka.chat.model.commands.{AddMessageCommand, ChatMessage, CreateChat
 object ExampleObjects {
   val userId = UserId("some-user-id")
   val otherUserId = UserId("other-user-id")
+  val thirdUserId = UserId("third-user-id")
 
   val userName = UserName("some-user-name")
   val otherUserName = UserName("other-user-name")

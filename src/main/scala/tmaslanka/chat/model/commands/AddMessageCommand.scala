@@ -12,6 +12,7 @@ sealed trait ChatCommandResponse
 case object Confirm extends ChatCommandResponse
 case object Reject extends ChatCommandResponse
 case object UnAuthorized extends ChatCommandResponse
+case object NotFound extends ChatCommandResponse
 case class ChatCreated(chatId: ChatId) extends ChatCommandResponse
 
 final case class ChatsListResponse(chats: Vector[ChatDescription])

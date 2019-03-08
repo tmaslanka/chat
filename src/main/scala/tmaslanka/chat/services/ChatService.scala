@@ -22,7 +22,7 @@ class ChatService(protocol: ShardingProtocol) {
   def getChatMessages(chatId: ChatId) = response
 
   def appendMessage(chatId: ChatId, createMessageCommand: AddMessageCommand): Future[ChatCommandResponse] = {
-    Future.successful(Confirm)
+    protocol.ask(chatId, createMessageCommand)
   }
 
 }

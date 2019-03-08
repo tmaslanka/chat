@@ -47,14 +47,28 @@ class ChatLogicTest extends WordSpec with MustMatchers {
       })
     }
 
-    "reject message if not from chat participant" in {
+    "return not found when chat is not initialized" in {
       val state0 = ChatState()
       runTest(state0)(for{
         actions <- applyCommand(addMessageCommand)
         state1 <- State.get
       } yield {
-        actions mustEqual Vector(Reply(UnAuthorized))
+        actions mustEqual Vector(Reply(NotFound))
         state1 mustEqual state0
+      })
+    }
+
+    "reject message if not from chat participant" in {
+      val state0 = ChatState()
+      runTest(state0)(for{
+        _ <- applyCommand(createChatCommand)
+        actions <- applyCommand(addMessageCommand.copy(message = chatMessage.copy(userId = thirdUserId)))
+        state1 <- State.get
+      } yield {
+        actions mustEqual Vector(Reply(UnAuthorized))
+
+        state1.userLastMessages mustBe empty
+        state1.lastMessageId mustEqual -1
       })
     }
 
