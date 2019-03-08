@@ -67,8 +67,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
   "GET /v1/users/userId/chats" should "return empty list" in {
     val userId = createUser(unique("Mat"))
 
-    given()
-      .get(s"v1/users/$userId/chats")
+    getUserChats(userId)
       .Then()
       .body("chats", hasSize(0))
   }
@@ -81,19 +80,29 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
 
     val chatId = createChatForUsers(aliceId, bobId)
 
-    given()
-      .get(s"v1/users/$bobId/chats")
+    getUserChats(bobId)
       .Then()
       .statusCode(200)
       .body("chats", hasSize(1))
       .bodyChatDescription(0, chatId, userIds)
 
-    given()
-      .get(s"v1/users/$aliceId/chats")
+    getUserChats(aliceId)
       .Then()
       .statusCode(200)
       .body("chats", hasSize(1))
       .bodyChatDescription(0, chatId, userIds)
+
+    val bob0Message = ChatMessage(0, bobId, "bob-0")
+
+    putMessageToChat(chatId, bob0Message)
+
+    getUserChats(bobId)
+      .Then()
+      .bodyChatDescription(0, chatId, userIds, lastMessage = bob0Message)
+
+    getUserChats(aliceId)
+      .Then()
+      .bodyChatDescription(0, chatId, userIds, lastMessage = bob0Message)
   }
 
   "PUT /v1/chats/chatId" should "start chat for Bob and Alice" in {
@@ -303,6 +312,11 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .get(s"v1/chats/$chatId/messages?from=$from&limit=$limit")
   }
 
+  private def getUserChats(bobId: UserId) = {
+    given()
+      .get(s"v1/users/$bobId/chats")
+  }
+
   private def isNotEmptyString = {
     not(isEmptyString)
   }
@@ -322,6 +336,17 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
         .body(s"chats[$idx].chatId", is(chatId.value))
         .body(s"chats[$idx].userIds", hasSize(userIds.size))
         .body(s"chats[$idx].userIds", containsInAnyOrder(userIds.map(_.value).toArray:_*))
+        .body("$", not(hasKey("lastMessage")))
+    }
+
+    def bodyChatDescription(idx: Int, chatId: ChatId, userIds: Set[UserId], lastMessage: ChatMessage): ValidatableResponse = {
+      response
+        .body(s"chats[$idx].chatId", is(chatId.value))
+        .body(s"chats[$idx].userIds", hasSize(userIds.size))
+        .body(s"chats[$idx].userIds", containsInAnyOrder(userIds.map(_.value).toArray:_*))
+        .body(s"chats[$idx].lastMessage.userSeq", is(lastMessage.userSeq.toInt))
+        .body(s"chats[$idx].lastMessage.text", is(lastMessage.text))
+        .body(s"chats[$idx].lastMessage.userId", is(lastMessage.userId.value))
     }
   }
 }
