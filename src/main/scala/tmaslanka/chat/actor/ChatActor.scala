@@ -4,7 +4,7 @@ import akka.persistence.PersistentActor
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
 import akka.stream.Materializer
 import tmaslanka.chat.actor.ChatActor.MessageAddedEvent
-import tmaslanka.chat.model.commands.{ChatCommand, ChatQuery, GetChatMessages, GetChatMessagesResponse}
+import tmaslanka.chat.model.commands._
 import tmaslanka.chat.model.domain._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -17,7 +17,7 @@ object ChatActor {
   val chatMessageTag = "chatMessage"
 }
 
-class ChatActor(journalQueries: JournalQueries)(implicit ex: ExecutionContext) extends PersistentActor {
+class ChatActor(journalQueries: ChatQueries)(implicit ex: ExecutionContext) extends PersistentActor {
   import ChatActor._
   import akka.pattern.pipe
 
@@ -59,19 +59,20 @@ class ChatActor(journalQueries: JournalQueries)(implicit ex: ExecutionContext) e
   }
 }
 
-class JournalQueries(val queries: CassandraReadJournal)(implicit ex: ExecutionContext, mat: Materializer) {
+class ChatQueries(val queries: CassandraReadJournal)(implicit ex: ExecutionContext, mat: Materializer) {
 
-  def handleChatQuery(persistenceId: String, query: ChatQuery, chatState: ChatState): Future[GetChatMessagesResponse] = query match {
+  def handleChatQuery(persistenceId: String, query: ChatQuery, chatState: ChatState): Future[ChatQueryResponse] = query match {
     case GetChatMessages(from, limit) =>
       val to = from + limit-1
       queries.eventsByPersistenceId(persistenceId, toSequenceNr(from), toSequenceNr(math.min(to, chatState.lastSeq)))
-        .map { env =>
-          println(s"processing envelope $env")
-          env.event
-        }
+        .map(_.event)
         .collect { case event: MessageAddedEvent => event }
         .runFold(Vector.empty[ChatMessage])((acc, event) => acc :+ event.message)
         .map(messages => GetChatMessagesResponse(from, messages))
+
+    case GetChatDescription =>
+      val description = ChatDescription(chatState.chatId, chatState.userIds, chatState.lastMessage)
+      Future.successful(GetChatDescriptionResponse(description))
   }
 
   private def toSequenceNr(from: Long) = from + 2

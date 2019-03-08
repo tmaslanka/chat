@@ -1,6 +1,6 @@
 package tmaslanka.chat.model.commands
 
-import tmaslanka.chat.model.domain.{ChatDescription, ChatId, ChatMessage, UserId}
+import tmaslanka.chat.model.domain._
 
 
 sealed trait ChatCommand
@@ -16,7 +16,11 @@ case class ChatCreated(chatId: ChatId) extends ChatCommandResponse
 
 sealed trait ChatQuery
 sealed trait ChatQueryResponse
+
 final case class GetChatMessages(from: Long = 0L, limit: Long = Long.MaxValue) extends ChatQuery
 final case class GetChatMessagesResponse(from: Long, messages: Vector[ChatMessage]) extends ChatQueryResponse
+
+case object GetChatDescription extends ChatQuery
+final case class GetChatDescriptionResponse(description: ChatDescription) extends ChatQueryResponse
 
 final case class ChatsListResponse(chats: Vector[ChatDescription])

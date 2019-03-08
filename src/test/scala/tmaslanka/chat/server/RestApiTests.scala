@@ -7,6 +7,7 @@ import io.restassured.RestAssured._
 import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import io.restassured.response.ValidatableResponse
 import org.hamcrest.Matchers
+import org.hamcrest.Matchers.{hasItems, hasKey, is, not}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
 import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
 
@@ -51,8 +52,8 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .get(s"v1/users/$userId")
       .Then()
       .statusCode(200)
-      .body("userName", Matchers.is(userName))
-      .body("userId", Matchers.is(userId.value))
+      .body("userName", is(userName))
+      .body("userId", is(userId.value))
 
   }
 
@@ -64,7 +65,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .statusCode(404)
   }
 
-  "GET /v1/users/userId/chats" should "return empty list of chat ids for user" in {
+  "GET /v1/users/userId/chats" should "return empty list" in {
     val userId = createUser(unique("Mat"))
 
     given()
@@ -72,8 +73,6 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .Then()
       .body("chats", Matchers.hasSize(0))
   }
-
-  //todo more tests /v1/users/userId/chats
 
   "PUT /v1/chats/chatId" should "start chat for Bob and Alice" in {
     val bobId = createUser(unique("Bob"))
@@ -94,7 +93,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     putChatForUsers(aliceId, bobId)
       .Then()
       .statusCode(200)
-      .body("chatId", Matchers.is(chatId.value))
+      .body("chatId", is(chatId.value))
   }
 
   "PUT /v1/chats/chatId" should "be idempotent also" in {
@@ -106,7 +105,32 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     putChatForUsers(bobId, aliceId)
       .Then()
       .statusCode(200)
-      .body("chatId", Matchers.is(chatId.value))
+      .body("chatId", is(chatId.value))
+  }
+
+  "GET /v1/chats/chatId" should "return chat description" in {
+    val bobId = createUser(unique("Bob"))
+    val aliceId = createUser(unique("Alice"))
+
+    val chatId = createChatForUsers(bobId, aliceId)
+
+    given()
+      .get(s"v1/chats/$chatId")
+      .Then()
+      .statusCode(200)
+      .body("chatId", is(chatId.value))
+      .body("userIds", hasItems(bobId.value, aliceId.value))
+      .body("$", not(hasKey("lastMessage")))
+
+    putMessageToChat(chatId, ChatMessage(0, bobId, "text-0"))
+
+    given()
+      .get(s"v1/chats/$chatId")
+      .Then()
+      .statusCode(200)
+      .body("lastMessage.text", is("text-0"))
+      .body("lastMessage.userId", is(bobId.value))
+      .body("lastMessage.userSeq", is(0))
   }
 
   "PUT /v1/chats/chatId/messages" should "append message to chat" in {
@@ -146,7 +170,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     getChatMessages(chatId)
       .Then()
       .body("messages", Matchers.hasSize(3))
-      .body("from", Matchers.is(0))
+      .body("from", is(0))
       .bodyMessages(0, bob0Message)
       .bodyMessages(1, alice0Message)
       .bodyMessages(2, alice1Message)
@@ -175,26 +199,26 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     getChatMessages(chatId, 3, 2)
       .Then()
       .body("messages", Matchers.hasSize(2))
-      .body("from", Matchers.is(3))
+      .body("from", is(3))
       .bodyMessages(0, alice2Message)
       .bodyMessages(1, alice3Message)
 
     getChatMessages(chatId, 10, 2)
       .Then()
       .body("messages", Matchers.hasSize(0))
-      .body("from", Matchers.is(10))
+      .body("from", is(10))
 
     getChatMessages(chatId, 4, 10)
       .Then()
       .body("messages", Matchers.hasSize(2))
-      .body("from", Matchers.is(4))
+      .body("from", is(4))
       .bodyMessages(0, alice3Message)
       .bodyMessages(1, bob1Message)
 
     getChatMessages(chatId, 0, 3)
       .Then()
       .body("messages", Matchers.hasSize(3))
-      .body("from", Matchers.is(0))
+      .body("from", is(0))
       .bodyMessages(0, bob0Message)
       .bodyMessages(1, alice0Message)
       .bodyMessages(2, alice1Message)
@@ -258,7 +282,7 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
   }
 
   private def isNotEmptyString = {
-    Matchers.not(Matchers.isEmptyString)
+    not(Matchers.isEmptyString)
   }
 
   private def unique(s: String): String = s"$s-${UUID.randomUUID()}"
@@ -266,9 +290,9 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
   implicit class ValidatableResponseOps(response: ValidatableResponse) {
     def bodyMessages(idx: Int, chatMessage: ChatMessage): ValidatableResponse = {
       response
-        .body(s"messages[$idx].userSeq", Matchers.is(chatMessage.userSeq.toInt))
-        .body(s"messages[$idx].text", Matchers.is(chatMessage.text))
-        .body(s"messages[$idx].userId", Matchers.is(chatMessage.userId.value))
+        .body(s"messages[$idx].userSeq", is(chatMessage.userSeq.toInt))
+        .body(s"messages[$idx].text", is(chatMessage.text))
+        .body(s"messages[$idx].userId", is(chatMessage.userId.value))
     }
   }
 }

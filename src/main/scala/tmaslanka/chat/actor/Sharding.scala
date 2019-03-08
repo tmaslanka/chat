@@ -23,7 +23,7 @@ object Sharding {
   //todo better id abstraction
   case class EntityEnvelope(id: StringValue, msg: Any)
 
-  def startSharding(settings: Settings, journalQueries: JournalQueries)
+  def startSharding(settings: Settings, journalQueries: ChatQueries)
                    (implicit system: ActorSystem, ex: ExecutionContext): ShardingProtocol = {
 
     val extractEntityId: ShardRegion.ExtractEntityId = {

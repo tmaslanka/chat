@@ -14,16 +14,22 @@ object ChatId {
   }
 }
 
-final case class ChatDescription(chatId: ChatId, userIds: Set[UserId], lastMessage: String)
+final case class ChatDescription(chatId: ChatId, userIds: Set[UserId], lastMessage: Option[ChatMessage])
 
 final case class ChatMessage(userSeq: Long, userId: UserId, text: String)
 
-final case class ChatState(lastSeq: Long = -1, userIds: Set[UserId] = Set(), userLastMessages: Map[UserId, ChatMessage] = Map()) {
+final case class ChatState(lastSeq: Long = -1,
+                           userIds: Set[UserId] = Set(),
+                           userLastMessages: Map[UserId, ChatMessage] = Map(),
+                           lastMessage: Option[ChatMessage] = None
+                          ) {
   def withUserIds(userIds: Set[UserId]): ChatState = copy(userIds = userIds)
 
   def withMessageAdded(message: ChatMessage): ChatState = copy(
     lastSeq = lastSeq + 1,
-    userLastMessages = userLastMessages.updated(message.userId, message))
+    userLastMessages = userLastMessages.updated(message.userId, message),
+    lastMessage = Some(message)
+  )
 
   def chatId: ChatId = ChatId.create(userIds)
 }
