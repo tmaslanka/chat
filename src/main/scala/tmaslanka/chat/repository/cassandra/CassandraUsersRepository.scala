@@ -25,12 +25,18 @@ class CassandraDatabase(override val connector: CassandraConnection)
   extends Database[CassandraDatabase](connector) {
 
   object userNameUserIdsTable extends UserNameUserIdTable with Connector
+
   object userIdUserNameTable extends UserIdUserNameTable with Connector
   object userChats extends UserChatsTable with Connector
 
   implicit val ex: ExecutionContextExecutor = BaseCassandraTable.ex
 
   object usersRepository extends UsersRepository {
+
+    override def findAll(): Future[Vector[User]] = {
+      userNameUserIdsTable.findAll()
+    }
+
     override def createUserIfNotExists(user: User): Future[Boolean] = {
       for {
         (updated, fromDB) <- userNameUserIdsTable.saveIfNotExists(user.userName, user.userId)
@@ -93,6 +99,13 @@ abstract class UserNameUserIdTable extends BaseCassandraTable[UserNameUserIdTabl
     record <- select.where(_.userName eqs userName).one()
     userId = record.map(_.userId)
   } yield userId
+
+  def findAll(): Future[Vector[User]] = {
+    for {
+      records <- select.fetch()
+      users = records.map(record => User(record.userId, record.userName))
+    } yield users.toVector
+  }
 }
 
 private[cassandra] final case class UserIdUserName(userId: UserId, userName: UserName)

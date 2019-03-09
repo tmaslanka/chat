@@ -5,6 +5,8 @@ import tmaslanka.chat.model.domain.{ChatId, User, UserId}
 import scala.concurrent.Future
 
 trait UsersRepository {
+  def findAll(): Future[Vector[User]]
+
   def createUserIfNotExists(user: User): Future[Boolean]
 
   def findUser(userId: UserId): Future[Option[User]]

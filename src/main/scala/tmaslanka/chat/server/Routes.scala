@@ -25,6 +25,9 @@ class Routes(settings: Settings,
             userService.createUser(request)
               .map(createResourceToResponse))
         }
+      } ~
+      get {
+        complete(userService.getUsers)
       }
     } ~
     pathPrefix(Segment) { userIdParam =>

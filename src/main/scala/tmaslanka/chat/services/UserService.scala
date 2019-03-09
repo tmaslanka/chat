@@ -10,6 +10,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class UserService(repository: UsersRepository)(implicit ex: ExecutionContext) {
 
+  def getUsers: Future[Vector[User]] = repository.findAll()
+
   def getUser(userId: UserId): Future[Option[User]] = {
     repository.findUser(userId)
   }

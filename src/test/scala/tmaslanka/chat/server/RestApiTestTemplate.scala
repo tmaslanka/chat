@@ -49,7 +49,6 @@ trait RestApiTestTemplate extends FlatSpec with BeforeAndAfterAll with StrictLog
       .statusCode(200)
       .body("userName", is(userName))
       .body("userId", is(userId.value))
-
   }
 
   "GET /v1/users/userId" should "not return user" in {
