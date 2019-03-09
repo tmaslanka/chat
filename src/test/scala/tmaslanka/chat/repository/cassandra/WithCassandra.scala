@@ -1,19 +1,17 @@
 package tmaslanka.chat.repository.cassandra
 
 import akka.persistence.cassandra.testkit.CassandraLauncher
-import com.datastax.driver.core.SocketOptions
-import com.outworkers.phantom.dsl._
+import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, Suite}
+import tmaslanka.chat.Settings
 import tmaslanka.chat.repository.UsersRepository
-
-import scala.language.reflectiveCalls
 
 trait WithCassandra extends BeforeAndAfterAll {
   this: Suite =>
 
   val port = 9042
 
-  private var connector: CassandraConnection = _
+  val settings = Settings(ConfigFactory.load())
 
   private var database: CassandraDatabase = _
 
@@ -21,23 +19,10 @@ trait WithCassandra extends BeforeAndAfterAll {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+
     CassandraLauncher.start(new java.io.File("target/cassandra"),
-      CassandraLauncher.DefaultTestConfigResource, clean = true, port = port)
+      CassandraLauncher.DefaultTestConfigResource, clean = true, port = settings.cassandraConfig.port)
 
-    val keyspace = CassandraKeySpace.keyspace
-
-    connector = ContactPoint.apply("localhost", port)
-      .withClusterBuilder(_.withSocketOptions(
-        new SocketOptions()
-          .setConnectTimeoutMillis(20000)
-          .setReadTimeoutMillis(20000)))
-      .noHeartbeat()
-      .keySpace(
-        keyspace.ifNotExists().`with`(
-          replication eqs SimpleStrategy.replication_factor(1)))
-
-
-    database = new CassandraDatabase(connector)
-    database.create()
+    database = new CassandraConnector(settings.cassandraConfig).connect()
   }
 }

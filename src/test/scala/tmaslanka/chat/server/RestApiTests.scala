@@ -2,24 +2,31 @@ package tmaslanka.chat.server
 
 import java.util.UUID
 
+import akka.persistence.cassandra.testkit.CassandraLauncher
 import cats.syntax.option._
+import com.typesafe.config.ConfigFactory
 import io.restassured.RestAssured._
 import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import io.restassured.response.ValidatableResponse
 import org.hamcrest.Matchers._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
+import tmaslanka.chat.Settings
 import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
-import tmaslanka.chat.repository.cassandra.WithCassandra
 
-class RestApiTests extends FlatSpec with BeforeAndAfterAll with WithCassandra {
+class RestApiTests extends FlatSpec with BeforeAndAfterAll {
 
   val `application/json` = "application/json"
 
-  val server = new ServerModule().server
-  server.start()
+  val settings = Settings(ConfigFactory.load())
+
+  CassandraLauncher.start(new java.io.File("target/cassandra"),
+    CassandraLauncher.DefaultTestConfigResource, clean = true, port = settings.cassandraConfig.port)
+
+  val module = new ServerModule(settings)
+  module.start()
 
   override protected def afterAll(): Unit = {
-    server.stop()
+    module.stop()
   }
 
   "PUT /v1/users" should "create user" in {

@@ -18,7 +18,17 @@ case class Settings(config: Config) {
 
   val askTimeout = Timeout(config.getDuration("chat.akka.ask-timeout"))
 
-  val `chat-messages-query-limit` = config.getInt("chat.messages.query-limit")
+  val `chat-messages-query-limit`: Int = config.getInt("chat.messages.query-limit")
+
+  val cassandraConfig = CassandraConfig.fromConfig(config.getConfig("cassandra"))
 
   private implicit def toScalaDuration(d: java.time.Duration): FiniteDuration = FiniteDuration(d.toNanos, TimeUnit.NANOSECONDS)
 }
+
+object CassandraConfig {
+  def fromConfig(config: Config): CassandraConfig = CassandraConfig(
+    config.getString("host"),
+    config.getInt("port")
+  )
+}
+final case class CassandraConfig(host: String, port: Int)

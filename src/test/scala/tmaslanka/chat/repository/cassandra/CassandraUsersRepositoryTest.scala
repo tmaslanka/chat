@@ -6,6 +6,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{MustMatchers, WordSpec}
 import cats.syntax.option._
 import tmaslanka.chat.model.domain.{ChatId, User}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class CassandraUsersRepositoryTest extends WordSpec with WithCassandra with MustMatchers with ScalaFutures {
