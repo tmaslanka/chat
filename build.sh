@@ -5,5 +5,7 @@ set -xe
 
 sbt clean test assembly it-test:test
 
+./servers-kill.sh
+
 #echo "building docker"
 #sbt docker

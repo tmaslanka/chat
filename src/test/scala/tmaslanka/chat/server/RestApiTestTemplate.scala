@@ -10,8 +10,8 @@ import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import io.restassured.response.ValidatableResponse
 import org.hamcrest.Matchers._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
-import tmaslanka.chat.{Main, Settings}
 import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
+import tmaslanka.chat.{Main, Settings}
 
 trait RestApiTestTemplate extends FlatSpec with BeforeAndAfterAll with StrictLogging {
 
@@ -147,6 +147,7 @@ trait RestApiTestTemplate extends FlatSpec with BeforeAndAfterAll with StrictLog
       .body("chatId", is(chatId.value))
       .body("userIds", hasItems(bobId.value, aliceId.value))
       .body("$", not(hasKey("lastMessage")))
+      .body("$", not(hasKey("lastSeq")))
 
     putMessageToChat(chatId, ChatMessage(0, bobId, "text-0"))
 
@@ -157,6 +158,9 @@ trait RestApiTestTemplate extends FlatSpec with BeforeAndAfterAll with StrictLog
       .body("lastMessage.text", is("text-0"))
       .body("lastMessage.userId", is(bobId.value))
       .body("lastMessage.userSeq", is(0))
+      .body("chatId", is(chatId.value))
+      .body("userIds", hasItems(bobId.value, aliceId.value))
+      .body("lastSeq", is(0))
   }
 
   "PUT /v1/chats/chatId/messages" should "append message to chat" in {

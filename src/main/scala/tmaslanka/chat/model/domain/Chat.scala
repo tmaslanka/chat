@@ -14,7 +14,7 @@ object ChatId {
   }
 }
 
-final case class ChatDescription(chatId: ChatId, userIds: Set[UserId], lastMessage: Option[ChatMessage])
+final case class ChatDescription(chatId: ChatId, userIds: Set[UserId], lastMessage: Option[ChatMessage], lastSeq: Option[Long])
 
 final case class ChatMessage(userSeq: Long, userId: UserId, text: String)
 

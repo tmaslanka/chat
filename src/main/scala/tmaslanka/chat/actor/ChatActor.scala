@@ -90,7 +90,8 @@ class ChatQueries(queries: CassandraReadJournal, settings: Settings)
         .map(messages => GetChatMessagesResponse(from, messages))
 
     case GetChatDescription =>
-      val description = ChatDescription(chatState.chatId, chatState.userIds, chatState.lastMessage)
+      val lastSeq = if (chatState.lastSeq == -1) None else Some(chatState.lastSeq)
+      val description = ChatDescription(chatState.chatId, chatState.userIds, chatState.lastMessage, lastSeq)
       Future.successful(GetChatDescriptionResponse(description))
   }
 
