@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
-java -Dakka.remote.netty.tcp.port=2551 -Dchat.server.port=8082 -jar ./target/scala-2.12/chat-assembly.jar
-java -Dakka.remote.netty.tcp.port=2552 -Dchat.server.port=8081 -jar ./target/scala-2.12/chat-assembly.jar
-java -Dakka.remote.netty.tcp.port=2553 -Dchat.server.port=8080 -jar ./target/scala-2.12/chat-assembly.jar
+./servers-kill.sh
+
+start() {
+    akka_port=$1
+    http_port=$2
+    java -Dakka.remote.netty.tcp.port=$akka_port -Dchat.server.port=$http_port -jar ./target/scala-2.12/chat-assembly.jar > target/server-http-$http_port.log
+}
+start 2551 8082 &
+start 2552 8081 &
+start 2553 8080 &

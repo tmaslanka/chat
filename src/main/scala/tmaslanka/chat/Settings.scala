@@ -22,6 +22,8 @@ case class Settings(config: Config) {
 
   val cassandraConfig = CassandraConfig.fromConfig(config.getConfig("cassandra"))
 
+  val `start-cassandra-hack` = config.getBoolean("chat.start-cassandra-hack")
+
   private implicit def toScalaDuration(d: java.time.Duration): FiniteDuration = FiniteDuration(d.toNanos, TimeUnit.NANOSECONDS)
 }
 

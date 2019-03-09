@@ -2,7 +2,6 @@ package tmaslanka.chat.server
 
 import java.util.UUID
 
-import akka.persistence.cassandra.testkit.CassandraLauncher
 import cats.syntax.option._
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
@@ -11,7 +10,7 @@ import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import io.restassured.response.ValidatableResponse
 import org.hamcrest.Matchers._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
-import tmaslanka.chat.Settings
+import tmaslanka.chat.{Main, Settings}
 import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
 
 trait RestApiTestTemplate extends FlatSpec with BeforeAndAfterAll with StrictLogging {
@@ -20,8 +19,7 @@ trait RestApiTestTemplate extends FlatSpec with BeforeAndAfterAll with StrictLog
 
   val settings = Settings(ConfigFactory.load())
 
-  CassandraLauncher.start(new java.io.File("target/cassandra"),
-    CassandraLauncher.DefaultTestConfigResource, clean = true, port = settings.cassandraConfig.port)
+  Main.startCassandra(settings)
 
   "PUT /v1/users" should "create user" in {
     putUser(unique("John"))

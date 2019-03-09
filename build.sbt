@@ -58,7 +58,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           %% "akka-persistence-query" % akkaV,
   "com.typesafe.akka"           %% "akka-persistence-cassandra"  % akkaCassandraV,
   "com.typesafe.akka"           %% "akka-slf4j" % akkaV,
-  "com.typesafe.akka"           %% "akka-persistence-cassandra-launcher" % cassandraLauncherV % "test,it-test",
+  "com.typesafe.akka"           %% "akka-persistence-cassandra-launcher" % cassandraLauncherV,
 
   "com.outworkers"              %% "phantom-dsl" % phantomV,
 
