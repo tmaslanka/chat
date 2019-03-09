@@ -1,5 +1,7 @@
 package tmaslanka.chat.actor
 
+import akka.actor.DiagnosticActorLogging
+import akka.event.Logging.MDC
 import akka.persistence.PersistentActor
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
 import akka.stream.Materializer
@@ -18,13 +20,17 @@ object ChatActor {
 }
 
 class ChatActor(journalQueries: ChatQueries, usersRepository: UsersRepository)
-               (implicit ex: ExecutionContext) extends PersistentActor {
+               (implicit ex: ExecutionContext) extends PersistentActor with DiagnosticActorLogging {
   import ChatActor._
   import akka.pattern.pipe
 
   override def persistenceId: String = self.path.name
 
   var state = ChatState()
+
+  override def mdc(currentMessage: Any): MDC = {
+    Map("persistenceId" -> persistenceId, "actor" -> "ChatActor")
+  }
 
   def updateState(event: ChatEvent): Vector[ChatEventAction] = {
     val (newState, actions) = ChatLogic.updateState(state, event)
@@ -38,6 +44,7 @@ class ChatActor(journalQueries: ChatQueries, usersRepository: UsersRepository)
 
   override def receiveCommand: Receive = {
     case cmd: ChatCommand =>
+      log.debug("received command {} from {}", cmd, sender())
       handleChatCommand(cmd)
     case query: ChatQuery =>
       journalQueries.handleChatQuery(persistenceId, query, state)
@@ -47,6 +54,7 @@ class ChatActor(journalQueries: ChatQueries, usersRepository: UsersRepository)
   def handleChatCommand(cmd: ChatCommand): Unit = {
     ChatLogic.commandToAction(state, cmd).foreach {
       case Save(event) => persist(event) { event =>
+        log.debug("saved event {}", event)
         //todo save snapshot every N events
         updateState(event)
           .foreach(handleChatEventAction)

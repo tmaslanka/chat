@@ -1,4 +1,5 @@
 import sbt._
+import sbtassembly.AssemblyPlugin.autoImport
 
 enablePlugins(DockerPlugin)
 
@@ -56,6 +57,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           %% "akka-persistence" % akkaV,
   "com.typesafe.akka"           %% "akka-persistence-query" % akkaV,
   "com.typesafe.akka"           %% "akka-persistence-cassandra"  % akkaCassandraV,
+  "com.typesafe.akka"           %% "akka-slf4j" % akkaV,
   "com.typesafe.akka"           %% "akka-persistence-cassandra-launcher" % cassandraLauncherV % "test,it-test",
 
   "com.outworkers"              %% "phantom-dsl" % phantomV,
@@ -77,6 +79,10 @@ configs(ItTest)
 inConfig(ItTest)(Defaults.testSettings)
 
 
+assemblyMergeStrategy in assembly := {
+  case "META-INF/io.netty.versions.properties" => MergeStrategy.concat
+  case x => (assemblyMergeStrategy in assembly).value(x)
+}
 
 artifact in (Compile, assembly) := {
   val art = (artifact in (Compile, assembly)).value

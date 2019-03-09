@@ -46,7 +46,6 @@ object ChatLogic {
       val action = if (state.userIds.isEmpty) {
         Save(ChatCreatedEvent(userIds))
       } else if (state.userIds == userIds) {
-        println("commandToAction ChatCreated")
         Reply(ChatCreated(state.chatId))
       } else {
         Reply(Reject)
@@ -80,7 +79,6 @@ object ChatLogic {
   def updateState(state: ChatState, event: ChatEvent): (ChatState, Vector[ChatEventAction]) = event match {
     case ChatCreatedEvent(userIds) =>
       val newState = state.withUserIds(userIds)
-      println("update state ChatCreated")
       val reply = Reply(ChatCreated(newState.chatId))
       newState -> Vector(UpdateUserChats(reply, userIds, newState.chatId))
     case MessageAddedEvent(message) =>
