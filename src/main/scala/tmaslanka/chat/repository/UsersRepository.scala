@@ -9,7 +9,7 @@ import scala.collection._
 import scala.concurrent.Future
 
 trait UsersRepository {
-  def createIfNotExists(user: User): Future[Boolean]
+  def createUserIfNotExists(user: User): Future[Boolean]
 
   def findUser(userId: UserId): Future[Option[User]]
 
@@ -27,7 +27,7 @@ class InMemoryUserRepository extends UsersRepository {
   val userIdToChatId: concurrent.Map[UserId, AtomicReference[Vector[ChatId]]] =
     new ConcurrentHashMap[UserId, AtomicReference[Vector[ChatId]]]().asScala
 
-  override def createIfNotExists(user: User): Future[Boolean] = Future.successful {
+  override def createUserIfNotExists(user: User): Future[Boolean] = Future.successful {
     users.get(user.userId) match {
       case Some(_) =>
         false

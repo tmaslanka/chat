@@ -41,6 +41,7 @@ val logbackV = "1.2.3"
 val slf4jV = "1.7.25"
 val scalaLoggingV = "3.9.0"
 val typesafeConfigV = "1.3.2"
+val phantomV = "2.9.2"
 val catsV = "1.6.0"
 val scalatestV = "3.0.5"
 val restAssuredV = "3.3.0"
@@ -56,6 +57,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           %% "akka-persistence-query" % akkaV,
   "com.typesafe.akka"           %% "akka-persistence-cassandra"  % akkaCassandraV,
   "com.typesafe.akka"           %% "akka-persistence-cassandra-launcher" % cassandraLauncherV % "test,it-test",
+
+  "com.outworkers"              %% "phantom-dsl" % phantomV,
 
   "org.typelevel"               %% "cats-core" % catsV,
 

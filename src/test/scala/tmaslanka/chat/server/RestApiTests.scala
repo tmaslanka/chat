@@ -2,22 +2,18 @@ package tmaslanka.chat.server
 
 import java.util.UUID
 
-import akka.persistence.cassandra.testkit.CassandraLauncher
+import cats.syntax.option._
 import io.restassured.RestAssured._
 import io.restassured.module.scala.RestAssuredSupport.AddThenToResponse
 import io.restassured.response.ValidatableResponse
 import org.hamcrest.Matchers._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
 import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
-import cats.syntax.option._
+import tmaslanka.chat.repository.cassandra.WithCassandra
 
-class RestApiTests extends FlatSpec with BeforeAndAfterAll {
+class RestApiTests extends FlatSpec with BeforeAndAfterAll with WithCassandra {
 
   val `application/json` = "application/json"
-
-  CassandraLauncher.start(new java.io.File("target/cassandra"),
-    CassandraLauncher.DefaultTestConfigResource, clean = true, port = 9042)
-
 
   val server = new ServerModule().server
   server.start()

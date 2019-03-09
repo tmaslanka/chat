@@ -17,7 +17,7 @@ class UserService(repository: UsersRepository)(implicit ex: ExecutionContext) {
   def createUser(request: CreateUserCommand): Future[Option[UserCreatedResponse]] = {
     val userId = UserId(UUID.randomUUID().toString)
     for {
-      created <- repository.createIfNotExists(User(userId, request.userName))
+      created <- repository.createUserIfNotExists(User(userId, request.userName))
       response = if (created) Some(UserCreatedResponse(userId)) else None
     } yield response
   }

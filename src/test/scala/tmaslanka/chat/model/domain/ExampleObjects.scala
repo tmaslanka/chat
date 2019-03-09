@@ -15,6 +15,8 @@ object ExampleObjects {
 
   val createChatCommand = CreateChatCommand(Set(userId, otherUserId))
 
+  val chatId = ChatId.create(Set(userId, otherUserId))
+
   val chatMessage = ChatMessage(0, userId, s"text1 from $userId")
   val secondChatMessage = next(chatMessage)
   val chatState = ChatState(userIds = Set(userId, otherUserId))
