@@ -22,7 +22,7 @@ class ServerModule {
   val cassandraReadJournal: CassandraReadJournal =
     PersistenceQuery(system).readJournalFor[CassandraReadJournal](CassandraReadJournal.Identifier)
 
-  val queries = new ChatQueries(cassandraReadJournal)
+  val queries = new ChatQueries(cassandraReadJournal, settings)
 
   //todo chage to Cassandra repository
   val userRepository = new InMemoryUserRepository()

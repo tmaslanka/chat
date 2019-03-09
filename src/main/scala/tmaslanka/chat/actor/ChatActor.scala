@@ -3,6 +3,7 @@ package tmaslanka.chat.actor
 import akka.persistence.PersistentActor
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
 import akka.stream.Materializer
+import tmaslanka.chat.Settings
 import tmaslanka.chat.actor.ChatActor.MessageAddedEvent
 import tmaslanka.chat.model.commands._
 import tmaslanka.chat.model.domain._
@@ -65,10 +66,14 @@ class ChatActor(journalQueries: ChatQueries, usersRepository: UsersRepository)
   }
 }
 
-class ChatQueries(val queries: CassandraReadJournal)(implicit ex: ExecutionContext, mat: Materializer) {
+class ChatQueries(queries: CassandraReadJournal, settings: Settings)
+                 (implicit ex: ExecutionContext, mat: Materializer) {
 
   def handleChatQuery(persistenceId: String, query: ChatQuery, chatState: ChatState): Future[ChatQueryResponse] = query match {
-    case GetChatMessages(from, limit) =>
+    case GetChatMessages(maybeFrom, maybeLimit) =>
+      val limit = maybeLimit.getOrElse(settings.`chat-messages-query-limit`)
+      val from = maybeFrom.getOrElse(math.max(0L, chatState.lastSeq - limit + 1))
+
       val to = from + limit-1
       queries.eventsByPersistenceId(persistenceId, toSequenceNr(from), toSequenceNr(math.min(to, chatState.lastSeq)))
         .map(_.event)

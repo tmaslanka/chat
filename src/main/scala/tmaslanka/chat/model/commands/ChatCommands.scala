@@ -17,7 +17,7 @@ case class ChatCreated(chatId: ChatId) extends ChatCommandResponse
 sealed trait ChatQuery
 sealed trait ChatQueryResponse
 
-final case class GetChatMessages(from: Long = 0L, limit: Long = Long.MaxValue) extends ChatQuery
+final case class GetChatMessages(from: Option[Long], limit: Option[Int]) extends ChatQuery
 final case class GetChatMessagesResponse(from: Long, messages: Vector[ChatMessage]) extends ChatQueryResponse
 
 case object GetChatDescription extends ChatQuery

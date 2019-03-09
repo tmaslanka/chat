@@ -29,7 +29,7 @@ class ChatService(protocol: ShardingProtocol, usersRepository: UsersRepository)(
       .map(_.description)
   }
 
-  def getChatMessages(chatId: ChatId, from: Long, limit: Long): Future[GetChatMessagesResponse] = {
+  def getChatMessages(chatId: ChatId, from: Option[Long], limit: Option[Int]): Future[GetChatMessagesResponse] = {
     protocol.query(chatId, GetChatMessages(from, limit)).mapTo[GetChatMessagesResponse]
   }
 

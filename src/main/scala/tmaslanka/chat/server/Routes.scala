@@ -58,10 +58,8 @@ class Routes(settings: Settings,
       } ~
       path("messages") {
         get {
-          parameters(('from.as[Int].?, 'limit.as[Int].?)) { (maybeFrom, maybeLimit) =>
-              val from = maybeFrom.getOrElse(0)
-              val limit = maybeLimit.getOrElse(settings.`chat-messages-query-limit`)
-              complete(chatService.getChatMessages(chatId, from, limit))
+          parameters(('from.as[Long].?, 'limit.as[Int].?)) { (maybeFrom, maybeLimit) =>
+              complete(chatService.getChatMessages(chatId, maybeFrom, maybeLimit))
           }
         } ~
         put {

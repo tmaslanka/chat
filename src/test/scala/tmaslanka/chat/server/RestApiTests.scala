@@ -9,6 +9,7 @@ import io.restassured.response.ValidatableResponse
 import org.hamcrest.Matchers._
 import org.scalatest.{BeforeAndAfterAll, FlatSpec}
 import tmaslanka.chat.model.domain.{ChatId, ChatMessage, UserId}
+import cats.syntax.option._
 
 class RestApiTests extends FlatSpec with BeforeAndAfterAll {
 
@@ -227,32 +228,52 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
     putMessageToChat(chatId, alice3Message)
     putMessageToChat(chatId, bob1Message)
 
-    getChatMessages(chatId, 3, 2)
+    getChatMessages(chatId, 3L.some, 2.some)
       .Then()
       .body("messages", hasSize(2))
       .body("from", is(3))
       .bodyMessages(0, alice2Message)
       .bodyMessages(1, alice3Message)
 
-    getChatMessages(chatId, 10, 2)
+    getChatMessages(chatId, 10L.some, 2.some)
       .Then()
       .body("messages", hasSize(0))
       .body("from", is(10))
 
-    getChatMessages(chatId, 4, 10)
+    getChatMessages(chatId, 4L.some, 10.some)
       .Then()
       .body("messages", hasSize(2))
       .body("from", is(4))
       .bodyMessages(0, alice3Message)
       .bodyMessages(1, bob1Message)
 
-    getChatMessages(chatId, 0, 3)
+    getChatMessages(chatId, 0L.some, 3.some)
       .Then()
       .body("messages", hasSize(3))
       .body("from", is(0))
       .bodyMessages(0, bob0Message)
       .bodyMessages(1, alice0Message)
       .bodyMessages(2, alice1Message)
+
+    getChatMessages(chatId, none, 4.some)
+      .Then()
+      .body("messages", hasSize(4))
+      .body("from", is(2))
+      .bodyMessages(0, alice1Message)
+      .bodyMessages(1, alice2Message)
+      .bodyMessages(2, alice3Message)
+      .bodyMessages(3, bob1Message)
+
+    getChatMessages(chatId, none, none)
+      .Then()
+      .body("messages", hasSize(6))
+      .body("from", is(0))
+      .bodyMessages(0, bob0Message)
+      .bodyMessages(1, alice0Message)
+      .bodyMessages(2, alice1Message)
+      .bodyMessages(3, alice2Message)
+      .bodyMessages(4, alice3Message)
+      .bodyMessages(5, bob1Message)
   }
 
   private def createUser(userName: String): UserId = {
@@ -307,9 +328,21 @@ class RestApiTests extends FlatSpec with BeforeAndAfterAll {
       .get(s"v1/chats/$chatId/messages")
   }
 
-  private def getChatMessages(chatId: ChatId, from: Long, limit: Long) = {
+  private def getChatMessages(chatId: ChatId, from: Option[Long], limit: Option[Int]) = {
+    def toParams[A](nameValues: (String, Option[A])*) = {
+      val params = nameValues.map { case (name, value) =>
+        value.map(v => s"$name=$v").getOrElse("")
+      }.filterNot(_.isEmpty).mkString("&")
+
+      if (params.isEmpty) {
+        params
+      } else {
+        s"?$params"
+      }
+    }
+
     given()
-      .get(s"v1/chats/$chatId/messages?from=$from&limit=$limit")
+      .get(s"v1/chats/$chatId/messages${toParams("from" -> from, "limit" -> limit)}")
   }
 
   private def getUserChats(bobId: UserId) = {
